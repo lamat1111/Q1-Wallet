@@ -55,15 +55,11 @@ The menu includes the following options:
 
 ## System Compatibility
 
-The script is compatible with:
+The script is currently compatible with:
 
 - **Linux**
   - x86_64 (amd64)
   - aarch64 (arm64)
-
-- **macOS (Darwin)**
-  - x86_64 (Intel)
-  - arm64 (Apple Silicon)
 
 Requirements:
 - Bash shell
