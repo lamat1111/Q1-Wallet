@@ -1684,28 +1684,53 @@ add_alias_if_needed() {
 #=====================
 
 check_for_updates() {
+    # Check if curl is available
     if ! command -v curl &> /dev/null; then
         return 1
     fi
 
-    local GITHUB_RAW_URL="https://raw.githubusercontent.com/lamat1111/QuilibriumScripts/main/tools/qclient_actions.sh"
+    local GITHUB_RAW_URL="https://raw.githubusercontent.com/lamat1111/Q1-Wallet/main/q1wallet.sh"
+    local SCRIPT_PATH="$QCLIENT_DIR/q1wallet.sh"  # Use QCLIENT_DIR which is already defined as $(pwd)
     local LATEST_VERSION
-
+    
+    # Fetch and extract the latest version from GitHub
     LATEST_VERSION=$(curl -sS "$GITHUB_RAW_URL" | sed -n 's/^SCRIPT_VERSION="\(.*\)"$/\1/p')
     
+    # Check if version fetch was successful
     if [ $? -ne 0 ] || [ -z "$LATEST_VERSION" ]; then
         return 1
     fi
     
-    # Version comparison function
-    version_gt() { test "$(printf '%s\n' "$@" | sort -V | head -n 1)" != "$1"; }
+    echo
+    echo "Current local version: $SCRIPT_VERSION"
+    echo "Latest remote version: $LATEST_VERSION"
     
+    # Version comparison
     if version_gt "$LATEST_VERSION" "$SCRIPT_VERSION"; then
-        if curl -sS -o "$HOME/scripts/qclient_actions_new.sh" "$GITHUB_RAW_URL"; then
-            chmod +x "$HOME/scripts/qclient_actions_new.sh"
-            mv "$HOME/scripts/qclient_actions_new.sh" "$HOME/scripts/qclient_actions.sh"
-            exec "$HOME/scripts/qclient_actions.sh"
+        echo
+        warning_message "A new version is available!"
+        echo
+        
+        # Download and replace the script
+        if curl -sS -o "${SCRIPT_PATH}.tmp" "$GITHUB_RAW_URL"; then
+            chmod +x "${SCRIPT_PATH}.tmp"
+            mv "${SCRIPT_PATH}.tmp" "$SCRIPT_PATH"
+            echo "✅ Update completed successfully!"
+            echo
+            echo "Restarting script in 3 seconds..."
+            sleep 3
+            exec "$SCRIPT_PATH"  # Restart the script
+        else
+            error_message "Update failed"
+            rm -f "${SCRIPT_PATH}.tmp"  # Clean up failed download
+            return 1
         fi
+        return 2
+    else
+        echo
+        echo "✅ You are running the latest version"
+        echo
+        return 0
     fi
 }
 
