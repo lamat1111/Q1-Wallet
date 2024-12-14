@@ -20,6 +20,27 @@ success_message() {
     echo -e "${GREEN}✅ $1${NC}"
 }
 
+check_system_compatibility() {
+    case "$OSTYPE" in
+        "linux-gnu"*)
+            case "$(uname -m)" in
+                "x86_64"|"aarch64")
+                    return 0 ;;
+                *)
+                    error_message "Unsupported Linux architecture: $(uname -m)"
+                    echo "Q1 Wallet currently supports only x86_64 and aarch64 architectures."
+                    exit 1
+                    ;;
+            esac
+            ;;
+        *)
+            error_message "Unsupported operating system: $OSTYPE"
+            echo "Q1 Wallet currently supports Linux only."
+            exit 1
+            ;;
+    esac
+}
+
 check_dependencies() {
     local deps=("curl" "unzip" "bc" "zip")
     local missing_deps=()
@@ -72,6 +93,9 @@ check_dependencies() {
         fi
     done
 }
+
+
+check_system_compatibility
 
 check_dependencies
 
