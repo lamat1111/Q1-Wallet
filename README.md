@@ -1,4 +1,4 @@
-# Q1 CLI Wallet
+# Q1 CLI Wallet (BETA)
 
 Q1 Wallet is a user-friendly menu interface for managing QUIL tokens using Quilibrium's qclient. It provides an easy-to-use command-line interface for common token operations without needing to remember complex commands.
 
