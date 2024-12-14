@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Define the version number here
-SCRIPT_VERSION="2.0.5"
+SCRIPT_VERSION="1.0"
 
 # Color definitions
 RED='\033[1;31m'      # Bright red for errors
@@ -427,7 +427,6 @@ download_latest_qclient() {
     fi
 }
 
-# Function to check if wallets are encrypted and handle decryption if needed
 # Function to check if wallets are encrypted and handle decryption if needed
 check_wallet_encryption() {
     if [ ! -d "$WALLETS_DIR" ] && [ -f "$QCLIENT_DIR/wallets.zip" ]; then
@@ -1780,7 +1779,7 @@ main() {
 #=====================
 
 check_qclient_binary
-#check_for_updates
+check_for_updates
 #add_alias_if_needed
 
 main
