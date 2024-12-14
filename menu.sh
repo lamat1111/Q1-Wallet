@@ -1689,8 +1689,8 @@ check_for_updates() {
         return 1
     fi
 
-    local GITHUB_RAW_URL="https://raw.githubusercontent.com/lamat1111/Q1-Wallet/main/q1wallet.sh"
-    local SCRIPT_PATH="$QCLIENT_DIR/q1wallet.sh"  # Use QCLIENT_DIR which is already defined as $(pwd)
+    local GITHUB_RAW_URL="https://raw.githubusercontent.com/lamat1111/Q1-Wallet/main/menu.sh"
+    local SCRIPT_PATH="$QCLIENT_DIR/menu.sh"  # Use QCLIENT_DIR which is already defined as $(pwd)
     local LATEST_VERSION
     
     # Fetch and extract the latest version from GitHub
