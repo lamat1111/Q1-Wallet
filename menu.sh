@@ -41,7 +41,11 @@ QCLIENT_EXEC=$(find "$QCLIENT_DIR" -maxdepth 1 -type f -name "qclient-*" ! -name
 QCLIENT_RELEASE_URL="https://releases.quilibrium.com/qclient-release"
 QUILIBRIUM_RELEASES="https://releases.quilibrium.com"
 
-# Menu interface with fixed color display
+
+#=====================
+# Menu interface
+#=====================
+
 display_menu() {
     clear
     # First part without colors
