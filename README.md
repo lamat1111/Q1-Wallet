@@ -57,7 +57,7 @@ The menu includes the following options:
 
 The script is currently compatible with:
 
-- **Linux**
+- **Linux or Windows WSL**
   - x86_64 (amd64)
   - aarch64 (arm64)
 
