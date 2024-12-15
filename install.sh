@@ -1,6 +1,6 @@
 #!/bin/bash
 
-SCRIPT_VERSION=1.9
+SCRIPT_VERSION=2.0.1
 INSTALL_DIR="$HOME/q1wallet"
 SYMLINK_PATH="/usr/local/bin/q1wallet"
 
@@ -34,7 +34,7 @@ check_sudo() {
     # Try to run sudo with -n flag (non-interactive) to check if we have permissions
     if ! sudo -n true 2>/dev/null; then
         # If we don't have cached credentials, ask for password
-        echo "Sudo access is required to create the system command."
+        echo "Sudo access is required to create the quick command."
         if ! sudo true; then
             error_message "Failed to obtain sudo privileges. Command creation aborted."
             return 1
@@ -252,11 +252,30 @@ handle_wallet_creation() {
 }
 
 setup_symlink() {
-    echo "Setting up q1wallet command..."
+    echo -e "\nQuick command setup"
+    echo "-------------------"
+    echo "Create a 'q1wallet' quick commands to call the menu."
+    echo "Requires sudo access to create the command in /usr/local/bin"
+    
+    read -p "Would you like to set up the quick command? (y/n): " setup_cmd
+    if [[ ! $setup_cmd =~ ^[Yy]$ ]]; then
+        echo "Skipping quick command setup."
+        echo "You can still use the wallet by running: $INSTALL_DIR/menu.sh"
+        return 0
+    fi
+    
+    # Check if symlink already exists with correct target
+    if [ -L "$SYMLINK_PATH" ]; then
+        current_target=$(readlink -f "$SYMLINK_PATH")
+        if [ "$current_target" = "$INSTALL_DIR/menu.sh" ]; then
+            success_message "Command 'q1wallet' is already set up correctly"
+            return 0
+        fi
+    fi
     
     # Check sudo access first
     if ! check_sudo; then
-        error_message "System command creation requires sudo access"
+        error_message "Quick command creation requires sudo access"
         echo "You can still use the wallet by running: $INSTALL_DIR/menu.sh"
         return 1
     fi
@@ -271,15 +290,8 @@ setup_symlink() {
         fi
     fi
     
-    # Check if symlink already exists
-    if [ -L "$SYMLINK_PATH" ]; then
-        if [ "$(readlink -f "$SYMLINK_PATH")" = "$INSTALL_DIR/menu.sh" ]; then
-            success_message "Command 'q1wallet' is already set up correctly"
-            return 0
-        else
-            warning_message "A different q1wallet command exists. Updating it..."
-        fi
-    elif [ -e "$SYMLINK_PATH" ]; then
+    # Check if a non-symlink file exists at the target location
+    if [ -e "$SYMLINK_PATH" ] && [ ! -L "$SYMLINK_PATH" ]; then
         error_message "A file already exists at $SYMLINK_PATH but is not a symlink"
         echo "Please remove it manually and run the installer again"
         return 1
@@ -288,9 +300,9 @@ setup_symlink() {
     # Create or update the symlink with explicit error checking
     echo "Creating symlink to $INSTALL_DIR/menu.sh..."
     if ! sudo ln -sf "$INSTALL_DIR/menu.sh" "$SYMLINK_PATH"; then
-        error_message "Failed to create system command 'q1wallet'"
+        error_message "Failed to create quick command 'q1wallet'"
         echo "You can still use the wallet by running: $INSTALL_DIR/menu.sh"
-        echo "To create the system command later, run: sudo ln -sf $INSTALL_DIR/menu.sh $SYMLINK_PATH"
+        echo "To create the quick command later, run: sudo ln -sf $INSTALL_DIR/menu.sh $SYMLINK_PATH"
         return 1
     fi
 
@@ -450,7 +462,7 @@ fi
 echo
 
 if ! setup_symlink; then
-    echo "To create the system command later, run: sudo ln -sf $INSTALL_DIR/menu.sh $SYMLINK_PATH"
+    echo "To create the quick command later, run: sudo ln -sf $INSTALL_DIR/menu.sh $SYMLINK_PATH"
     echo
 fi
 
