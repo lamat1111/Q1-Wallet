@@ -1,6 +1,6 @@
 #!/bin/bash
 
-SCRIPT_VERSION=1.3
+SCRIPT_VERSION=1.4
 INSTALL_DIR="$HOME/q1wallet"
 
 # Color definitions
@@ -61,6 +61,88 @@ check_system_compatibility() {
             exit 1
             ;;
     esac
+}
+
+check_existing_installation() {
+    local has_wallets=false
+    
+    # Check if installation directory exists
+    if [ -d "$INSTALL_DIR" ]; then
+        # Check if there are existing wallets
+        if [ -d "$INSTALL_DIR/wallets" ] && [ "$(ls -A "$INSTALL_DIR/wallets" 2>/dev/null)" ]; then
+            has_wallets=true
+        fi
+        
+        echo -e "\n${ORANGE}Existing Q1 Wallet installation detected!${NC}"
+        echo "Location: $INSTALL_DIR"
+        if [ "$has_wallets" = true ]; then
+            echo "Existing wallets found in the installation"
+        fi
+        
+        echo -e "\nPlease choose an option:"
+        echo "1. Exit installation"
+        echo "2. Reinstall software only (keeps wallets and configuration)"
+        echo "3. Complete reinstall (${RED}WARNING: WILL DELETE ALL EXISTING WALLETS${NC})"
+        
+        while true; do
+            read -p "Enter your choice (1-3): " choice
+            case $choice in
+                1)
+                    echo "Installation cancelled"
+                    exit 0
+                    ;;
+                2)
+                    reinstall_software_only
+                    return $?
+                    ;;
+                3)
+                    confirm_full_reinstall
+                    return $?
+                    ;;
+                *)
+                    error_message "Invalid choice. Please enter 1, 2, or 3"
+                    ;;
+            esac
+        done
+    fi
+    
+    # No existing installation, proceed normally
+    return 0
+}
+
+reinstall_software_only() {
+    echo -e "\nReinstalling Q1 Wallet software..."
+    echo "Keeping existing wallets and configuration"
+    
+    # Backup current wallet selection if it exists
+    if [ -f "$INSTALL_DIR/.current_wallet" ]; then
+        cp "$INSTALL_DIR/.current_wallet" "$INSTALL_DIR/.current_wallet.bak"
+    fi
+    
+    # Remove everything except wallets directory
+    find "$INSTALL_DIR" -mindepth 1 -maxdepth 1 ! -name 'wallets' -exec rm -rf {} +
+    
+    # Restore current wallet selection if it existed
+    if [ -f "$INSTALL_DIR/.current_wallet.bak" ]; then
+        mv "$INSTALL_DIR/.current_wallet.bak" "$INSTALL_DIR/.current_wallet"
+    fi
+    
+    return 0
+}
+
+confirm_full_reinstall() {
+    echo -e "\n${RED}WARNING: This will delete ALL existing wallets and data in $INSTALL_DIR${NC}"
+    echo "This action cannot be undone!"
+    
+    read -p "Do you want to proceed? (y/n): " confirm
+    if [[ ! $confirm =~ ^[Yy]$ ]]; then
+        echo "Installation cancelled"
+        exit 0
+    fi
+    
+    echo "Removing existing installation..."
+    rm -rf "$INSTALL_DIR"
+    return 0
 }
 
 check_dependencies() {
@@ -172,6 +254,7 @@ setup_symlink() {
 # Run initial checks
 check_system_compatibility
 check_dependencies
+check_existing_installation
 
 # Add this section to ensure we're in the correct directory
 if [ "$PWD" != "$INSTALL_DIR" ]; then
