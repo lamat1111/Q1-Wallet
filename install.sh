@@ -329,7 +329,7 @@ echo -e "
                         \___|        
                               
 =================================================================
-                 Welcome to Q1 Wallet Installer
+             Welcome to Q1 Wallet Installer - $SCRIPT_VERSION
 ================================================================="
 
 # Ask about wallet creation
