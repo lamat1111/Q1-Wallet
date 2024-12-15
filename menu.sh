@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Define the version number here
-SCRIPT_VERSION="1.4"
+SCRIPT_VERSION="1.4.1"
 
 # Color definitions
 RED='\033[1;31m'      # Bright red for errors
