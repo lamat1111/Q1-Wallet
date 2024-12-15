@@ -1,6 +1,7 @@
 #!/bin/bash
 
-SCRIPT_VERSION=1.1
+SCRIPT_VERSION=1.2
+INSTALL_DIR="$HOME/q1wallet"
 
 # Color definitions
 RED='\033[1;31m'      # Bright red for errors
@@ -15,7 +16,7 @@ error_message() {
 }
 
 warning_message() {
-    echo -e "${ORANGE}⚠️  $1${NC}"
+    echo -e "${ORANGE}⚠️ $1${NC}"
 }
 
 success_message() {
@@ -95,9 +96,49 @@ check_dependencies() {
     success_message "Successfully installed all dependencies!"
 }
 
-check_system_compatibility
+setup_symlink() {
+    echo "Setting up q1wallet command..."
+    
+    # Check if symlink already exists
+    if [ -L "$SYMLINK_PATH" ]; then
+        # Check if it points to our menu.sh
+        if [ "$(readlink -f "$SYMLINK_PATH")" = "$INSTALL_DIR/menu.sh" ]; then
+            success_message "Command 'q1wallet' is already set up correctly"
+            return 0
+        else
+            warning_message "A different q1wallet command exists. Updating it..."
+        fi
+    elif [ -e "$SYMLINK_PATH" ]; then
+        error_message "A file already exists at $SYMLINK_PATH but is not a symlink"
+        echo "Please remove it manually and run the installer again"
+        return 1
+    fi
 
+    # Create or update the symlink
+    if sudo ln -sf "$INSTALL_DIR/menu.sh" "$SYMLINK_PATH"; then
+        success_message "Command 'q1wallet' installed successfully!"
+        echo "You can now type 'q1wallet' to call the wallet menu"
+        echo
+        echo "If that doesn't work, you can always call the menu with:"
+        echo "cd $(pwd) && ./menu.sh"
+    else
+        error_message "Failed to create command. Check sudo permissions"
+        return 1
+    fi
+}
+
+# Run initial checks
+check_system_compatibility
 check_dependencies
+
+# Add this section to ensure we're in the correct directory
+if [ "$PWD" != "$INSTALL_DIR" ]; then
+    echo "Changing to installation directory: $INSTALL_DIR"
+    cd "$INSTALL_DIR" || {
+        error_message "Failed to change to installation directory: $INSTALL_DIR"
+        exit 1
+    }
+fi
 
 # Show welcome message
 clear
@@ -209,10 +250,11 @@ echo "Location: $(pwd)"
 if [[ -n "$wallet_name" ]]; then
     echo "Wallet created: $wallet_name"
 fi
+
 echo
-echo "To start Q1 Wallet, run:"
-echo "cd $(pwd) && ./menu.sh"
-echo
+# Add setup_symlink call before asking to start the wallet
+success_message "Installation completed successfully!"
+setup_symlink
 
 # Launch the menu if requested
 read -p "Would you like to start Q1 Wallet now? (y/n): " start_now
