@@ -1,6 +1,6 @@
 #!/bin/bash
 
-SCRIPT_VERSION=1.6
+SCRIPT_VERSION=1.7
 INSTALL_DIR="$HOME/q1wallet"
 SYMLINK_PATH="/usr/local/bin/q1wallet"
 
@@ -301,19 +301,6 @@ setup_symlink() {
     fi
 }
 
-# Run initial checks
-check_system_compatibility
-check_dependencies
-check_existing_installation
-
-# Add this section to ensure we're in the correct directory
-if [ "$PWD" != "$INSTALL_DIR" ]; then
-    echo "Changing to installation directory: $INSTALL_DIR"
-    cd "$INSTALL_DIR" || {
-        error_message "Failed to change to installation directory: $INSTALL_DIR"
-        exit 1
-    }
-fi
 
 # Show welcome message
 clear
@@ -331,6 +318,20 @@ echo -e "
 =================================================================
              Welcome to Q1 Wallet Installer - $SCRIPT_VERSION
 ================================================================="
+
+# Run initial checks
+check_system_compatibility
+check_dependencies
+check_existing_installation
+
+# Add this section to ensure we're in the correct directory
+if [ "$PWD" != "$INSTALL_DIR" ]; then
+    echo "Changing to installation directory: $INSTALL_DIR"
+    cd "$INSTALL_DIR" || {
+        error_message "Failed to change to installation directory: $INSTALL_DIR"
+        exit 1
+    }
+fi
 
 # Ask about wallet creation
 read -p "Would you like to create a new wallet now? (y/n): " create_wallet
