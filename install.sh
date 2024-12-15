@@ -410,7 +410,7 @@ fi
 # Download files
 for file in $files; do
     echo "Downloading $file..."
-    if ! curl -s -f "$QUILIBRIUM_RELEASES/$file" > "$file"; then
+    if ! curl -# -f "$QUILIBRIUM_RELEASES/$file" > "$file"; then
         error_message "Failed to download $file"
         continue
     fi
