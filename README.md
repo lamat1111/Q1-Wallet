@@ -2,6 +2,9 @@
 
 Q1 Wallet is a user-friendly menu interface for managing QUIL tokens using Quilibrium's qclient. It provides an easy-to-use command-line interface for common token operations without needing to remember complex commands.
 
+Q1 Wallet is unofficial community software provided as-is. Always verify transactions carefully and keep your wallet information secure.
+The current version is still in BETA, use carefully an dreport any issues.
+
 ## What is Q1 Wallet?
 
 Q1 Wallet is a bash script that wraps around the Quilibrium qclient, providing a menu-driven interface for:
@@ -73,10 +76,6 @@ Requirements:
 - Multiple wallets can be created and managed
 - Optional encryption for wallet storage is available via zip/unzip of the "wallets" folder
 - Regular updates are provided through the GitHub repository
-
-## Disclaimer
-
-Q1 Wallet is unofficial community software provided as-is. Always verify transactions carefully and keep your wallet information secure.
 
 ## Licence
 
