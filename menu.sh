@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Define the version number here
-SCRIPT_VERSION="1.3"
+SCRIPT_VERSION="1.4"
 
 # Color definitions
 RED='\033[1;31m'      # Bright red for errors
@@ -26,7 +26,7 @@ if [ -f "$CURRENT_WALLET_FILE" ]; then
     WALLET_NAME=$(cat "$CURRENT_WALLET_FILE")
 elif check_existing_wallets; then
     # Get the first wallet found
-    WALLET_NAME=$(find "$WALLETS_DIR" -mindepth 2 -maxdepth 2 -type f -name "config.yml" | head -n1 | awk -F'/' '{print $(NF-2)}')
+    WALLET_NAME=$(find "$WALLETS_DIR" -mindepth 2 -maxdepth 2 -type d -name ".config" | head -n1 | awk -F'/' '{print $(NF-2)}')
     echo "$WALLET_NAME" > "$CURRENT_WALLET_FILE"
 else
     # No existing wallets found, create default
@@ -455,17 +455,15 @@ check_wallet_encryption() {
     return 0  # Wallets are not encrypted
 }
 
-# Check for existing wallets
 check_existing_wallets() {
     if [ -d "$WALLETS_DIR" ]; then
-        # Look for any directory containing .config/config.yml
-        if find "$WALLETS_DIR" -mindepth 2 -maxdepth 2 -type f -name "config.yml" | grep -q .; then
+        # Look for any directory containing .config folder
+        if find "$WALLETS_DIR" -mindepth 2 -maxdepth 2 -type d -name ".config" | grep -q .; then
             return 0 # Found existing wallet(s)
         fi
     fi
     return 1 # No existing wallets found
 }
-
 
 #=====================
 # Menu functions
