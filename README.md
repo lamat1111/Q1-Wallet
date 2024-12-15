@@ -77,3 +77,7 @@ Requirements:
 ## Disclaimer
 
 Q1 Wallet is unofficial community software provided as-is. Always verify transactions carefully and keep your wallet information secure.
+
+## Licence
+
+CC - Attribution-NonCommercial-ShareAlike 4.0 International
