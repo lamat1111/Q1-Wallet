@@ -1,6 +1,6 @@
 #!/bin/bash
 
-SCRIPT_VERSION=1.2
+SCRIPT_VERSION=1.3
 INSTALL_DIR="$HOME/q1wallet"
 
 # Color definitions
@@ -21,6 +21,25 @@ warning_message() {
 
 success_message() {
     echo -e "${GREEN}✅ $1${NC}"
+}
+
+# Check if sudo is available and user has permissions
+check_sudo() {
+    if ! command -v sudo &> /dev/null; then
+        error_message "sudo is not installed on this system"
+        return 1
+    fi
+
+    # Try to run sudo with -n flag (non-interactive) to check if we have permissions
+    if ! sudo -n true 2>/dev/null; then
+        # If we don't have cached credentials, ask for password
+        echo "Sudo access is required to create the system command."
+        if ! sudo true; then
+            error_message "Failed to obtain sudo privileges. Command creation aborted."
+            return 1
+        fi
+    fi
+    return 0
 }
 
 check_system_compatibility() {
@@ -99,9 +118,25 @@ check_dependencies() {
 setup_symlink() {
     echo "Setting up q1wallet command..."
     
+    # Check sudo access first
+    if ! check_sudo; then
+        echo "You can still use the wallet by running: $INSTALL_DIR/menu.sh"
+        echo "To create the system command later, run: sudo ln -sf $INSTALL_DIR/menu.sh $SYMLINK_PATH"
+        return 1
+    fi
+    
+    # First ensure /usr/local/bin exists
+    if [ ! -d "/usr/local/bin" ]; then
+        echo "Creating /usr/local/bin directory..."
+        if ! sudo mkdir -p /usr/local/bin; then
+            error_message "Failed to create /usr/local/bin directory"
+            echo "You can still use the wallet by running: $INSTALL_DIR/menu.sh"
+            return 1
+        fi
+    fi
+    
     # Check if symlink already exists
     if [ -L "$SYMLINK_PATH" ]; then
-        # Check if it points to our menu.sh
         if [ "$(readlink -f "$SYMLINK_PATH")" = "$INSTALL_DIR/menu.sh" ]; then
             success_message "Command 'q1wallet' is already set up correctly"
             return 0
@@ -114,15 +149,22 @@ setup_symlink() {
         return 1
     fi
 
-    # Create or update the symlink
-    if sudo ln -sf "$INSTALL_DIR/menu.sh" "$SYMLINK_PATH"; then
+    # Create or update the symlink with explicit error checking
+    echo "Creating symlink to $INSTALL_DIR/menu.sh..."
+    if ! sudo ln -sf "$INSTALL_DIR/menu.sh" "$SYMLINK_PATH"; then
+        error_message "Failed to create symlink"
+        echo "You can still use the wallet by running: $INSTALL_DIR/menu.sh"
+        return 1
+    fi
+
+    # Verify the symlink was created
+    if [ -L "$SYMLINK_PATH" ]; then
         success_message "Command 'q1wallet' installed successfully!"
-        echo "You can now type 'q1wallet' to call the wallet menu"
-        echo
-        echo "If that doesn't work, you can always call the menu with:"
-        echo "cd $(pwd) && ./menu.sh"
+        echo "You can now run 'q1wallet' from anywhere"
+        return 0
     else
-        error_message "Failed to create command. Check sudo permissions"
+        error_message "Symlink creation appeared to succeed but link not found"
+        echo "You can still use the wallet by running: $INSTALL_DIR/menu.sh"
         return 1
     fi
 }
@@ -254,7 +296,10 @@ fi
 echo
 # Add setup_symlink call before asking to start the wallet
 success_message "Installation completed successfully!"
-setup_symlink
+if ! setup_symlink; then
+    warning_message "System command creation failed, but wallet installation is complete"
+    echo "You can use the wallet by running: $INSTALL_DIR/menu.sh"
+fi
 
 # Launch the menu if requested
 read -p "Would you like to start Q1 Wallet now? (y/n): " start_now
