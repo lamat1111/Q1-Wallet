@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Define the version number here
-SCRIPT_VERSION="1.1.2"
+SCRIPT_VERSION="1.1.3"
 
 # Color definitions
 RED='\033[1;31m'      # Bright red for errors
@@ -36,8 +36,11 @@ else
     mkdir -p "$WALLETS_DIR/$WALLET_NAME/.config"
 fi
 
-# Set config flag to point directly to the .config folder
-FLAGS="--config $WALLETS_DIR/$WALLET_NAME/.config --public-rpc"
+get_config_flags() {
+    echo "--config $WALLETS_DIR/$WALLET_NAME/.config --public-rpc"
+}
+
+FLAGS=$(get_config_flags)
 
 # Find qclient binary (excluding signature and identifier files)
 QCLIENT_EXEC=$(find "$QCLIENT_DIR" -maxdepth 1 -type f -name "qclient-*" ! -name "*.dgst*" ! -name "*.sig*" ! -name "*Zone.Identifier*" | sort -V | tail -n 1)
@@ -1334,7 +1337,7 @@ create_new_wallet() {
             # Update current wallet
             WALLET_NAME="$new_wallet"
             echo "$WALLET_NAME" > "$CURRENT_WALLET_FILE"
-            CONFIG_FLAG="--config $WALLETS_DIR/$WALLET_NAME/.config --public-rpc"
+            FLAGS=$(get_config_flags)
             
             echo "✅ Created new wallet: $new_wallet"
             echo "✅ Switched to new wallet"
@@ -1405,13 +1408,12 @@ switch_wallet() {
         new_wallet="${wallets[$((selection-1))]}"
         WALLET_NAME="$new_wallet"
         echo "$WALLET_NAME" > "$CURRENT_WALLET_FILE"
-        CONFIG_FLAG="--config $WALLETS_DIR/$WALLET_NAME/.config --public-rpc"
+        FLAGS=$(get_config_flags)  # Update FLAGS with new wallet
         
         echo "✅ Switched to wallet: $new_wallet"
         break
     done
 }
-
 # Function to delete a wallet
 delete_wallet() {
     # First check if wallets are encrypted
