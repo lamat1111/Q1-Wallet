@@ -1,6 +1,6 @@
 #!/bin/bash
 
-SCRIPT_VERSION=1.8
+SCRIPT_VERSION=1.9
 INSTALL_DIR="$HOME/q1wallet"
 SYMLINK_PATH="/usr/local/bin/q1wallet"
 
@@ -65,19 +65,22 @@ check_system_compatibility() {
 }
 
 check_existing_installation() {
-    local has_wallets=false
-    
-    # Check if installation directory exists
-    if [ -d "$INSTALL_DIR" ]; then
-        # Check if there are existing wallets
-        if [ -d "$INSTALL_DIR/wallets" ] && [ "$(ls -A "$INSTALL_DIR/wallets" 2>/dev/null)" ]; then
-            has_wallets=true
-        fi
-        
+    # Check if both menu.sh and wallets folder exist
+    if [ -f "$INSTALL_DIR/menu.sh" ] && [ -d "$INSTALL_DIR/wallets" ]; then
         echo -e "\n${ORANGE}Existing Q1 Wallet installation detected!${NC}"
         echo "Location: $INSTALL_DIR"
-        if [ "$has_wallets" = true ]; then
-            echo "Existing wallets found in the installation"
+        
+        # Check for wallet subfolders and list them
+        if [ -d "$INSTALL_DIR/wallets" ]; then
+            # Use find to get only directories, one level deep
+            wallet_dirs=$(find "$INSTALL_DIR/wallets" -mindepth 1 -maxdepth 1 -type d 2>/dev/null)
+            if [ -n "$wallet_dirs" ]; then
+                echo -e "\nExisting wallets found:"
+                while IFS= read -r wallet_path; do
+                    wallet_name=$(basename "$wallet_path")
+                    echo "- $wallet_name"
+                done <<< "$wallet_dirs"
+            fi
         fi
         
         echo -e "\nPlease choose an option:"
@@ -107,7 +110,7 @@ check_existing_installation() {
         done
     fi
     
-    # No existing installation, proceed normally
+    # No valid installation found, return false
     return 0
 }
 
