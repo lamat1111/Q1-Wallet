@@ -1,5 +1,7 @@
 #!/bin/bash
 
+SCRIPT_VERSION=1.1
+
 # Color definitions
 RED='\033[1;31m'      # Bright red for errors
 ORANGE='\033[0;33m'   # Orange for warnings
@@ -45,55 +47,53 @@ check_dependencies() {
     local deps=("curl" "unzip" "bc" "zip")
     local missing_deps=()
     
-    # Quietly check for missing dependencies
+    echo "Checking required dependencies..."
+    
+    # Check for missing dependencies
     for dep in "${deps[@]}"; do
         if ! command -v "$dep" &> /dev/null; then
             missing_deps+=("$dep")
+            echo "❌ Missing: $dep"
+        else
+            echo "✅ Found: $dep"
         fi
     done
     
-    # If all dependencies are present, return silently
-    [ ${#missing_deps[@]} -eq 0 ] && return 0
+    # If all dependencies are present, return
+    if [ ${#missing_deps[@]} -eq 0 ]; then
+        success_message "All dependencies are installed!"
+        return 0
+    fi
     
-    echo "Installing required dependencies..."
+    echo -e "\nInstalling missing dependencies: ${missing_deps[*]}"
     
-    case "$OSTYPE" in
-        "linux-gnu"*)
-            if command -v apt-get &> /dev/null; then
-                sudo DEBIAN_FRONTEND=noninteractive apt-get update -qq
-                sudo DEBIAN_FRONTEND=noninteractive apt-get install -qq -y "${missing_deps[@]}"
-            elif command -v yum &> /dev/null; then
-                sudo yum install -y -q "${missing_deps[@]}"
-            elif command -v dnf &> /dev/null; then
-                sudo dnf install -y -q "${missing_deps[@]}"
-            elif command -v pacman &> /dev/null; then
-                sudo pacman -Sy --noconfirm --quiet "${missing_deps[@]}"
-            else
-                error_message "Could not detect package manager. Please install: ${missing_deps[*]}"
-                exit 1
-            fi
-            ;;
-        "darwin"*)
-            if ! command -v brew &> /dev/null; then
-                /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-            fi
-            brew install --quiet "${missing_deps[@]}"
-            ;;
-        *)
-            error_message "Unsupported operating system"
-            exit 1
-            ;;
-    esac
+    if command -v apt-get &> /dev/null; then
+        echo "Using apt package manager..."
+        sudo DEBIAN_FRONTEND=noninteractive apt-get update
+        for dep in "${missing_deps[@]}"; do
+            echo "Installing $dep..."
+            sudo DEBIAN_FRONTEND=noninteractive apt-get install -y "$dep"
+        done
+    else
+        error_message "This installer requires apt package manager. Please install manually: ${missing_deps[*]}"
+        exit 1
+    fi
     
-    # Verify installation silently
+    # Verify installation
+    local failed_deps=()
     for dep in "${missing_deps[@]}"; do
         if ! command -v "$dep" &> /dev/null; then
-            error_message "Failed to install required dependencies"
-            exit 1
+            failed_deps+=("$dep")
         fi
     done
+    
+    if [ ${#failed_deps[@]} -ne 0 ]; then
+        error_message "Failed to install: ${failed_deps[*]}"
+        exit 1
+    fi
+    
+    success_message "Successfully installed all dependencies!"
 }
-
 
 check_system_compatibility
 
