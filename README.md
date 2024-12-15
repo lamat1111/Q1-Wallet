@@ -39,8 +39,15 @@ The menu includes the following options:
 ## Installation
 
 1. **Quick Installation**
+   
    ```bash
-   curl -s https://raw.githubusercontent.com/lamat1111/Q1-Wallet/main/install.sh | bash
+   # This will install in the folder ~/q1wallet
+   
+   cd && \
+   mkdir -p ~/q1wallet && \
+   curl -sSL "https://raw.githubusercontent.com/lamat1111/Q1-Wallet/main/install.sh" -o ~/q1wallet/install.sh && \
+   chmod +x ~/q1wallet/install.sh && \
+   ~/q1wallet/install.sh
    ```
 
 2. **Manual Installation**
