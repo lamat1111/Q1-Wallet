@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Define the version number here
-SCRIPT_VERSION="1.1.4"
+SCRIPT_VERSION="1.1.5"
 
 # Color definitions
 RED='\033[1;31m'      # Bright red for errors
@@ -302,24 +302,37 @@ version_gt() {
 }
 
 check_qclient_version() {
+    echo
+    echo "Checking Qclient version..."
     # Get remote version
     local REMOTE_VERSION
-    REMOTE_VERSION=$(curl -s "$QCLIENT_RELEASE_URL" | grep -E "^qclient-[0-9]+(\.[0-9]+)*" | sed 's/^qclient-//' | cut -d '-' -f 1 | head -n 1)
+    REMOTE_VERSION=$(curl -s "$QCLIENT_RELEASE_URL" | grep -E "qclient-[0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?" | head -n1 | sed -E 's/.*qclient-([0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?).*/\1/')
     
     if [ -z "$REMOTE_VERSION" ]; then
         error_message "Could not fetch remote version"
         return 1
     fi
     
-    # Get current directory (where the script is running)
-    local QCLIENT_DIR="$(pwd)"
+    # Find the qclient binary
+    local QCLIENT_PATH
+    QCLIENT_PATH=$(find "$QCLIENT_DIR" -maxdepth 1 -type f -name "qclient-*" ! -name "*.dgst*" ! -name "*.sig*" ! -name "*Zone.Identifier*" | sort -V | tail -n 1)
     
-    # Find current version from local qclient binary
+    if [ -z "$QCLIENT_PATH" ]; then
+        error_message "No qclient binary found in $QCLIENT_DIR"
+        echo "Would you like to download the latest version? (y/n)"
+        read -r response
+        if [[ "$response" =~ ^[Yy]$ ]]; then
+            download_latest_qclient
+        fi
+        return 1
+    fi
+    
+    # Extract local version from binary name
     local LOCAL_VERSION
-    LOCAL_VERSION=$(find "$QCLIENT_DIR" -maxdepth 1 -type f -name "qclient-*" ! -name "*.dgst*" ! -name "*.sig*" ! -name "*Zone.Identifier*" | sort -V | tail -n 1 | grep -o '[0-9]\+\.[0-9]\+\.[0-9]\+\.*[0-9]*')
-    
-    if [ -z "$LOCAL_VERSION" ]; then
-        error_message "Could not determine local version"
+    if [[ "$QCLIENT_PATH" =~ qclient-([0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?) ]]; then
+        LOCAL_VERSION="${BASH_REMATCH[1]}"
+    else
+        error_message "Could not determine local version from binary: $QCLIENT_PATH"
         return 1
     fi
     
@@ -348,7 +361,7 @@ check_qclient_version() {
         return 2
     else
         echo
-        echo "✅ You are running the latest version of Qclient"
+        echo "✅ You are running the latest version"
         echo
         return 0
     fi
@@ -365,9 +378,17 @@ download_latest_qclient() {
         echo "This may take some time, don't close your terminal."
         echo
         
-        # Create directories if they don't exist
-        mkdir -p "$QCLIENT_DIR"
-        mkdir -p "$QCLIENT_DIR/.config"
+        # Ensure we're using the correct directory
+        if [ ! -d "$QCLIENT_DIR" ]; then
+            mkdir -p "$QCLIENT_DIR"
+        fi
+        
+        # Create .config directory if it doesn't exist
+        if [ ! -d "$QCLIENT_DIR/.config" ]; then
+            mkdir -p "$QCLIENT_DIR/.config"
+        fi
+        
+        # Change to the QCLIENT_DIR directory
         cd "$QCLIENT_DIR" || exit 1
         
         # Detect OS and architecture
@@ -396,17 +417,26 @@ download_latest_qclient() {
             return 1
         fi
 
-        # Filter files for current architecture
-        files=$(echo "$files" | grep "$release_os-$release_arch" || true)
-
-        if [ -z "$files" ]; then
+        # Filter files for current architecture and store the version
+        matched_files=$(echo "$files" | grep "$release_os-$release_arch" || true)
+        if [ -z "$matched_files" ]; then
             error_message "Error: No qclient files found for $release_os-$release_arch"
             return 1
         fi
 
+        # Extract version from the filename
+        VERSION_PATTERN="qclient-([0-9]+\.[0-9]+\.[0-9]+)"
+        if [[ $(echo "$matched_files" | head -n1) =~ $VERSION_PATTERN ]]; then
+            NEW_VERSION="${BASH_REMATCH[1]}"
+            echo "Found version: $NEW_VERSION"
+        else
+            error_message "Error: Could not determine version from filenames"
+            return 1
+        fi
+
         # Download files
-        for file in $files; do
-            if ! test -f "./$file"; then
+        echo "$matched_files" | while read -r file; do
+            if [ ! -f "$file" ]; then
                 echo "Downloading $file..."
                 if ! curl -s -f --connect-timeout 10 --max-time 300 "$QUILIBRIUM_RELEASES/$file" > "$file"; then
                     error_message "Failed to download $file"
@@ -426,8 +456,17 @@ download_latest_qclient() {
             fi
         done
 
-        echo "✅ Successfully downloaded Qclient to $QCLIENT_DIR"
-        return 0  # Return success but don't restart
+        # Update QCLIENT_EXEC to point to the new binary
+        QCLIENT_EXEC=$(find "$QCLIENT_DIR" -maxdepth 1 -type f -name "qclient-*" ! -name "*.dgst*" ! -name "*.sig*" ! -name "*Zone.Identifier*" | sort -V | tail -n 1)
+
+        if [ -n "$QCLIENT_EXEC" ]; then
+            echo "✅ Successfully downloaded Qclient to $QCLIENT_DIR"
+            chmod +x "$QCLIENT_EXEC"
+            return 0
+        else
+            error_message "Error: Could not locate downloaded qclient binary"
+            return 1
+        fi
     else
         error_message "Download cancelled. Please obtain the Qclient manually."
         return 1
@@ -1700,40 +1739,6 @@ DISCLAIMER:
 The author assumes no responsibility for any QUIL loss due to misuse of this script.
 Use this script at your own risk and always verify transactions before confirming them.
 '
-}
-
-
-#=====================
-# One-time alias setup
-#=====================
-
-# Replace the current SCRIPT_DIR definition with:
-SCRIPT_DIR="$HOME/scripts"  # Hardcoded path
-# Or use this more dynamic approach that follows symlinks:
-#SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
-
-ALIAS_MARKER_FILE="$SCRIPT_DIR/.q1wallet_alias_added"
-
-add_alias_if_needed() {
-    if [ ! -f "$ALIAS_MARKER_FILE" ]; then
-        local comment_line="# This alias calls the \"Q1 wallet\" menu by typing \"q1wallet\""
-        local alias_line="alias q1wallet='/root/scripts/$(basename "${BASH_SOURCE[0]}")'"  # Hardcoded path
-        if ! grep -q "$alias_line" "$HOME/.bashrc"; then
-            echo "" >> "$HOME/.bashrc"  # Add a blank line for better readability
-            echo "$comment_line" >> "$HOME/.bashrc"
-            echo "$alias_line" >> "$HOME/.bashrc"
-            echo "Alias added to .bashrc."
-            
-            # Source .bashrc to make the alias immediately available
-            if [ -n "$BASH_VERSION" ]; then
-                source "$HOME/.bashrc"
-                echo "Alias 'q1wallet' is now active."
-            else
-                echo "Please run 'source ~/.bashrc' or restart your terminal to use the 'qclient' command."
-            fi
-        fi
-        touch "$ALIAS_MARKER_FILE"
-    fi
 }
 
 
