@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Define the version number here
-SCRIPT_VERSION="1.1.3"
+SCRIPT_VERSION="1.1.4"
 
 # Color definitions
 RED='\033[1;31m'      # Bright red for errors
@@ -1599,10 +1599,52 @@ count_coins() {
     echo
 }
 
+
 help() {
-    echo
-    $QCLIENT_EXEC --help
-    echo
+    cat << EOF
+
+$(format_title "WALLET COMMANDS HELP")
+
+BALANCE & TRANSACTIONS
+---------------------
+1 - Check Balance / Address
+    View your current QUIL balance and wallet address for receiving funds
+
+2 - Create Transaction
+    Send QUIL to another wallet address by selecting specific coins to transfer
+
+COIN MANAGEMENT
+--------------
+6 - Check Individual Coins
+    Display detailed information about each coin in your wallet including amounts and metadata
+
+7 - Merge Coins
+    Combine multiple coins into a single coin. You can merge two specific coins or all coins at once
+
+8 - Split Coins
+    Divide a single coin into multiple coins with specified amounts
+
+WALLET MANAGEMENT
+-----------------
+10 - Create New Wallet
+     Generate a new wallet with its own address and configuration
+
+11 - Import Wallet
+     Import an existing wallet by adding its configuration files
+
+12 - Switch Wallet
+     Change between different wallets you have created or imported
+
+13 - Encrypt/Decrypt Wallet
+     Secure your wallet files with password protection or decrypt them for use
+
+14 - Delete Wallet
+     Remove a wallet and all its associated files (cannot be undone)
+
+Note: Always ensure you have backups of your wallet configurations
+      and never share your private keys or configuration files.
+
+EOF
 }
 
 import_wallet() {
