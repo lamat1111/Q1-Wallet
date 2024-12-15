@@ -385,8 +385,9 @@ case "$OSTYPE" in
     *) error_message "Error: Unsupported operating system ($OSTYPE)"; exit 1 ;;
 esac
 
+echo
 echo "Downloading qclient for $release_os-$release_arch..."
-echo "This may take some time, do not close your terminal"
+echo "This may take some time, do not close your terminal."
 echo
 QCLIENT_RELEASE_URL="https://releases.quilibrium.com/qclient-release"
 QUILIBRIUM_RELEASES="https://releases.quilibrium.com"
