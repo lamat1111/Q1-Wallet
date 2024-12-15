@@ -167,6 +167,8 @@ case "$OSTYPE" in
 esac
 
 echo "Downloading qclient for $release_os-$release_arch..."
+echo "This may take some time, do not close your terminal"
+echo
 QCLIENT_RELEASE_URL="https://releases.quilibrium.com/qclient-release"
 QUILIBRIUM_RELEASES="https://releases.quilibrium.com"
 
