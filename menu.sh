@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Define the version number here
-SCRIPT_VERSION="1.1.6"
+SCRIPT_VERSION="1.1.7"
 
 # Color definitions
 RED='\033[1;31m'      # Bright red for errors
@@ -582,12 +582,15 @@ create_transaction() {
         return 1
     fi
     
-    description="This will transfer a coin to another address.
-
-IMPORTANT:
-- Make sure the recipient address is correct - this operation cannot be undone
-- The account address is different from the node peerID
-- Account addresses and coin IDs have the same format - don't send to a coin address"
+    echo
+    echo "$(format_title "Create Transaction")"
+    echo "This will transfer a coin to another address."
+    echo
+    echo "IMPORTANT:"
+    echo "- Make sure the recipient address is correct - this operation cannot be undone"
+    echo "- The account address is different from the node peerID"
+    echo "- Account addresses and coin IDs have the same format - don't send to a coin address"
+    echo
         
     if ! confirm_proceed "Create Transaction" "$description"; then
         main
@@ -893,13 +896,11 @@ token_split_advanced() {
         show_error_and_confirm "Wallet encryption check failed"
         return 1
     fi
-    
-    description="This will split a coin into multiple new coins (up to 50) using different methods"
 
-    if ! confirm_proceed "Split Coins" "$description"; then
-        main
-        return 1
-    fi
+    echo
+    echo "$(format_title "Split Coins")"
+    echo "This will split a coin into multiple new coins (up to 50) using different methods"
+    echo
 
     # Show split options in a loop until valid choice
     while true; do
@@ -1178,8 +1179,11 @@ token_merge() {
         return 1
     fi
     
-    description="This function allows you to merge either two specific coins or all your coins into a single coin"
-
+    echo
+    echo "$(format_title "Merge Coins")"
+    echo "This function allows you to merge either two specific coins or all your coins into a single coin"
+    echo
+    
     if ! confirm_proceed "Merge Coins" "$description"; then
         main
         return 1
@@ -1476,12 +1480,9 @@ create_new_wallet() {
         return 1
     fi
     
-    description="This will create a new wallet with its own address and configuration.\nNote: Use only lowercase letters, numbers, dashes (-) and underscores (_)"
-    
-    if ! confirm_proceed "Create New Wallet" "$description"; then
-        main
-        return 1
-    fi
+    echo
+    echo "$(format_title "Create Wallet")"
+    echo
     
     while true; do
         read -p "Enter new wallet name (or 'e' to exit): " new_wallet
@@ -1544,12 +1545,9 @@ switch_wallet() {
         return 1
     fi
     
-    description="This will allow you to switch between your existing wallets"
-    
-    if ! confirm_proceed "Switch Wallet" "$description"; then
-        main
-        return 1
-    fi
+    echo
+    echo "$(format_title "Switch Wallet")"
+    echo
     
     # List available wallets
     if [ ! -d "$WALLETS_DIR" ]; then
@@ -1572,7 +1570,6 @@ switch_wallet() {
     fi
 
     while true; do
-        echo
         echo "Available wallets:"
         echo "-----------------"
         for i in "${!wallets[@]}"; do
@@ -1609,37 +1606,23 @@ switch_wallet() {
             continue
         fi
         
-        # Confirm switch
-        echo
-        echo "You are about to switch to wallet: $new_wallet"
-        read -p "Do you want to proceed? (y/n): " confirm
-        
-        if [[ ${confirm,,} == "y" ]]; then
-            # Switch wallet
-            WALLET_NAME="$new_wallet"
-            if ! echo "$WALLET_NAME" > "$CURRENT_WALLET_FILE"; then
-                show_error_and_confirm "Failed to update current wallet file"
-                return 1
-            fi
-            
-            FLAGS=$(get_config_flags)  # Update FLAGS with new wallet
-            
-            echo
-            echo "✅ Switched to wallet: $new_wallet"
-            echo
-            
-            # Verify switch by checking balance
-            if ! check_balance; then
-                show_error_and_confirm "Wallet switch completed but balance check failed"
-                return 1
-            fi
-            
-            main
-            return 0
-        else
-            echo "Switch cancelled."
-            continue
+        # Switch wallet
+        WALLET_NAME="$new_wallet"
+        if ! echo "$WALLET_NAME" > "$CURRENT_WALLET_FILE"; then
+            show_error_and_confirm "Failed to update current wallet file"
+            return 1
         fi
+        
+        FLAGS=$(get_config_flags)
+        
+        echo
+        echo "✅ Switched to wallet: $new_wallet"
+        echo
+        
+        # Verify switch by checking balance
+        check_balance
+        main
+        return 0
     done
 }
 
@@ -1749,16 +1732,13 @@ delete_wallet() {
 }
 
 encrypt_decrypt_wallets() {
-    description="This will encrypt or decrypt your wallet files for security"
-    
-    if ! confirm_proceed "Wallet Encryption" "$description"; then
-        main
-        return 1
-    fi
-
     # Check current state
     if [ -f "$QCLIENT_DIR/wallets.zip" ] && [ ! -d "$WALLETS_DIR" ]; then
         # Encrypted state: only offer decrypt option
+        echo
+        echo "$(format_title "Wallet Encryption")"
+        echo "This will decrypt your wallet files using your password."
+        echo
         echo "Current status: Wallets are encrypted"
         echo
         
@@ -1809,6 +1789,10 @@ encrypt_decrypt_wallets() {
         
     elif [ -d "$WALLETS_DIR" ] && [ ! -f "$QCLIENT_DIR/wallets.zip" ]; then
         # Unencrypted state: only offer encrypt option
+        echo
+        echo "$(format_title "Wallet Encryption")"
+        echo "This will encrypt your wallet files to secure them with a password."
+        echo
         echo "Current status: Wallets are unprotected"
         echo
         warning_message "IMPORTANT: If you lose the password, your wallets cannot be recovered!"
