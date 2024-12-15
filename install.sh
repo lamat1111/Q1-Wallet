@@ -1,7 +1,8 @@
 #!/bin/bash
 
-SCRIPT_VERSION=1.5
+SCRIPT_VERSION=1.6
 INSTALL_DIR="$HOME/q1wallet"
+SYMLINK_PATH="/usr/local/bin/q1wallet"
 
 # Color definitions
 RED='\033[1;31m'      # Bright red for errors
@@ -250,8 +251,8 @@ setup_symlink() {
     
     # Check sudo access first
     if ! check_sudo; then
+        error_message "System command creation requires sudo access"
         echo "You can still use the wallet by running: $INSTALL_DIR/menu.sh"
-        echo "To create the system command later, run: sudo ln -sf $INSTALL_DIR/menu.sh $SYMLINK_PATH"
         return 1
     fi
     
@@ -282,8 +283,9 @@ setup_symlink() {
     # Create or update the symlink with explicit error checking
     echo "Creating symlink to $INSTALL_DIR/menu.sh..."
     if ! sudo ln -sf "$INSTALL_DIR/menu.sh" "$SYMLINK_PATH"; then
-        error_message "Failed to create symlink"
+        error_message "Failed to create system command 'q1wallet'"
         echo "You can still use the wallet by running: $INSTALL_DIR/menu.sh"
+        echo "To create the system command later, run: sudo ln -sf $INSTALL_DIR/menu.sh $SYMLINK_PATH"
         return 1
     fi
 
@@ -421,6 +423,8 @@ if [[ -n "$wallet_name" ]]; then
     echo "$wallet_name" > .current_wallet
 fi
 
+# Success message
+echo
 success_message "Installation completed successfully!"
 echo
 echo "Installation details:"
@@ -429,13 +433,11 @@ echo "Location: $(pwd)"
 if [[ -n "$wallet_name" ]]; then
     echo "Wallet created: $wallet_name"
 fi
-
 echo
-# Add setup_symlink call before asking to start the wallet
-success_message "Installation completed successfully!"
+
 if ! setup_symlink; then
-    warning_message "System command creation failed, but wallet installation is complete"
-    echo "You can use the wallet by running: $INSTALL_DIR/menu.sh"
+    echo "To create the system command later, run: sudo ln -sf $INSTALL_DIR/menu.sh $SYMLINK_PATH"
+    echo
 fi
 
 # Launch the menu if requested
