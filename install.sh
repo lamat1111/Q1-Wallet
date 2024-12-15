@@ -101,7 +101,7 @@ check_dependencies
 
 # Show welcome message
 clear
-echo -e "${BOLD}
+echo -e "
                     Q1Q1Q1\    Q1\   
                    Q1  __Q1\ Q1Q1 |  
                    Q1 |  Q1 |\_Q1 |  
@@ -114,7 +114,7 @@ echo -e "${BOLD}
                               
 =================================================================
                  Welcome to Q1 Wallet Installer
-=================================================================${NC}"
+================================================================="
 
 
 # Show current directory and ask for installation location
