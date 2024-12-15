@@ -116,22 +116,6 @@ echo -e "
                  Welcome to Q1 Wallet Installer
 ================================================================="
 
-
-# Show current directory and ask for installation location
-current_dir=$(pwd)
-echo
-echo "Current directory: $current_dir"
-echo "The Q1 Wallet will be installed in this location."
-echo -e "${ORANGE}If you want to install it somewhere else, press Ctrl+C and cd to the desired location first.${NC}"
-echo
-
-# Ask for confirmation
-read -p "Do you want to proceed with the installation in this location? (y/n): " proceed
-if [[ ! $proceed =~ ^[Yy]$ ]]; then
-    error_message "Installation cancelled."
-    exit 1
-fi
-
 # Ask about wallet creation
 read -p "Would you like to create a new wallet now? (y/n): " create_wallet
 wallet_name=""
@@ -152,8 +136,7 @@ fi
 # Create directory structure
 echo
 echo "Creating directory structure..."
-mkdir -p "q1wallet/wallets"
-cd "q1wallet" || exit 1
+mkdir -p "wallets"
 
 # Download the wallet script
 echo "Downloading Q1 Wallet script..."
