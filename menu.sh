@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Define the version number here
-SCRIPT_VERSION="1.1"
+SCRIPT_VERSION="1.2"
 
 # Color definitions
 RED='\033[1;31m'      # Bright red for errors
@@ -63,11 +63,13 @@ display_menu() {
 ================================================================="
     echo -e "${BOLD}Q1 WALLET (BETA) >> ${PURPLE}${BOLD}$WALLET_NAME${NC}"
     echo -e "=================================================================
-1) Check balance / address       9) Create new wallet
-2) Create transaction           10) Change wallet
-6) Check individual coins       11) Encrypt/decrypt wallet
-7) Merge coins                  12) Delete wallet
-8) Split coins                               
+1) Check balance / address       6) Check individual coins      
+2) Create transaction            7) Merge coins   
+                                 8) Split coins  
+-----------------------------------------------------------------
+10) Create new wallet           12) Switch wallet
+11) Import wallet               13) Encrypt/decrypt wallet
+                                14) Delete wallet
 -----------------------------------------------------------------
 U) Check for updates             X) Disclaimer   
 S) Security settings             H) Help
@@ -1590,6 +1592,15 @@ help() {
     echo
 }
 
+import_wallet() {
+    echo
+    echo "$(format_title "Import wallet")"
+    echo "
+To import a new wallet create a folder in $WALLETS_DIR (the folder name will be your wallet name),
+then create a .config folder inside it, and paste there your current wallet config.yml file
+"
+}
+
 donations() {
     echo
     echo "$(format_title "Donations")"
@@ -1757,10 +1768,11 @@ main() {
             6) check_coins; prompt_return_to_menu || break ;;
             7) token_merge && prompt_return_to_menu || break ;;
             8) token_split_advanced && prompt_return_to_menu || break;;
-            9) create_new_wallet; press_any_key ;;
-            10) switch_wallet; press_any_key ;;
-            11) encrypt_decrypt_wallets; press_any_key ;;
-            12) delete_wallet; press_any_key ;;
+            10) create_new_wallet; press_any_key ;;
+            11) import_wallet; press_any_key ;;
+            12) switch_wallet; press_any_key ;;
+            13) encrypt_decrypt_wallets; press_any_key ;;
+            14) delete_wallet; press_any_key ;;
             [uU]) check_qclient_version; press_any_key ;;
             [sS]) security_settings; press_any_key ;;
             [bB]) best_providers; press_any_key ;;
