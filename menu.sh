@@ -66,7 +66,7 @@ display_menu() {
                         \___|        
                               
 ================================================================="
-    echo -e "${BOLD}Q1 WALLET (BETA) >> ${PURPLE}${BOLD}$WALLET_NAME${NC}"
+    echo -e "${BOLD}Q1 WALLET (BETA) ${PURPLE}${BOLD}>> $WALLET_NAME${NC}"
     echo -e "=================================================================
 1) Check balance / address       6) Check individual coins      
 2) Create transaction            7) Merge coins   
