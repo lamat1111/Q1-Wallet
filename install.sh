@@ -82,7 +82,7 @@ check_existing_installation() {
         echo -e "\nPlease choose an option:"
         echo "1. Exit installation"
         echo "2. Reinstall software only (keeps wallets and configuration)"
-        echo "3. Complete reinstall (${RED}WARNING: WILL DELETE ALL EXISTING WALLETS${NC})"
+        echo -e "3. Complete reinstall (${RED}WARNING: WILL DELETE ALL EXISTING WALLETS${NC})"
         
         while true; do
             read -p "Enter your choice (1-3): " choice
