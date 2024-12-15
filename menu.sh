@@ -1755,8 +1755,8 @@ main() {
             4) reject_transaction; prompt_return_to_menu || break ;;
             5) mutual_transfer; prompt_return_to_menu || break ;;
             6) check_coins; prompt_return_to_menu || break ;;
-            7) token_split_advanced && prompt_return_to_menu || break;;
-            8) token_merge && prompt_return_to_menu || break ;;
+            7) token_merge && prompt_return_to_menu || break ;;
+            8) token_split_advanced && prompt_return_to_menu || break;;
             9) create_new_wallet; press_any_key ;;
             10) switch_wallet; press_any_key ;;
             11) encrypt_decrypt_wallets; press_any_key ;;
