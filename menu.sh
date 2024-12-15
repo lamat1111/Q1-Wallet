@@ -1637,18 +1637,7 @@ This tool and all related scripts are unofficial and are being shared as-is.
 I take no responsibility for potential bugs or any misuse of the available options. 
 
 All scripts are open source; feel free to inspect them before use.
-Repo: https://github.com/lamat1111/QuilibriumScripts
-'
-}
-
-best_providers() {
-    echo
-    echo "$(format_title "Best Server Providers")"
-    echo '
-Check out the best server providers for your node
-at ★ https://iri.quest/q-best-providers ★
-
-Avoid using providers that specifically ban crypto and mining.
+Repo: https://github.com/lamat1111/Q1-Wallet
 '
 }
 
@@ -1657,7 +1646,7 @@ security_settings() {
     echo "$(format_title "Security Settings")"
     echo '
 This script performs QUIL transactions. You can inspect the source code by running:
-cat "'$SCRIPT_PATH/qclient_actions.sh'"
+cat "'$QCLIENT_DIR/menu.sh'"
 
 The script also auto-updates to the latest version automatically.
 If you want to disable auto-updates, comment out the line "check_for_updates"
