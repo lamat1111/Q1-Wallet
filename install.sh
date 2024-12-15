@@ -321,8 +321,8 @@ echo -e "
 
 # Run initial checks
 check_system_compatibility
-check_dependencies
 check_existing_installation
+check_dependencies
 
 # Add this section to ensure we're in the correct directory
 if [ "$PWD" != "$INSTALL_DIR" ]; then
