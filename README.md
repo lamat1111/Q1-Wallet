@@ -42,7 +42,7 @@ The menu includes the following options:
    
    ```bash
    # This will install in the folder ~/q1wallet
-   
+
    cd && \
    mkdir -p ~/q1wallet && \
    curl -sSL "https://raw.githubusercontent.com/lamat1111/Q1-Wallet/main/install.sh" -o ~/q1wallet/install.sh && \
@@ -61,6 +61,8 @@ The menu includes the following options:
 
    # Run the wallet
    ./menu.sh
+
+   # Optional: add a symlink "q1wallet" to call the menu
    ```
 
 ## System Compatibility
