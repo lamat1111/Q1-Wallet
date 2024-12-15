@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Define the version number here
-SCRIPT_VERSION="1.1.7"
+SCRIPT_VERSION="1.1.8"
 
 # Color definitions
 RED='\033[1;31m'      # Bright red for errors
@@ -58,33 +58,33 @@ display_menu() {
     clear
     # First part without colors
     echo "
-                    Q1Q1Q1\    Q1\   
-                   Q1  __Q1\ Q1Q1 |  
-                   Q1 |  Q1 |\_Q1 |  
-                   Q1 |  Q1 |  Q1 |  
-                   Q1 |  Q1 |  Q1 |  
-                   Q1  Q1Q1 |  Q1 |  
-                   \Q1Q1Q1 / Q1Q1Q1\ 
-                    \___Q1Q\ \______|  QUILIBRIUM.ONE
-                        \___|        
+                Q1Q1Q1\    Q1\   
+               Q1  __Q1\ Q1Q1 |  
+               Q1 |  Q1 |\_Q1 |  
+               Q1 |  Q1 |  Q1 |  
+               Q1 |  Q1 |  Q1 |  
+               Q1  Q1Q1 |  Q1 |  
+               \Q1Q1Q1 / Q1Q1Q1\ 
+               \___Q1Q\ \______|  QUILIBRIUM.ONE
+                   \___|        
                               
-================================================================="
+========================================================"
     echo -e "${BOLD}Q1 WALLET (BETA) ${PURPLE}${BOLD}>> $WALLET_NAME${NC}"
-    echo -e "=================================================================
-1) Check balance / address       6) Check individual coins      
-2) Create transaction            7) Merge coins   
-                                 8) Split coins  
------------------------------------------------------------------
-10) Create new wallet           12) Switch wallet
-11) Import wallet               13) Encrypt/decrypt wallet
-                                14) Delete wallet
------------------------------------------------------------------
-U) Check for updates             X) Disclaimer   
-S) Security settings             H) Help
------------------------------------------------------------------ 
+    echo -e "========================================================
+1) Check balance / address   6) Check individual coins      
+2) Create transaction        7) Merge coins   
+                             8) Split coins  
+--------------------------------------------------------
+10) Create new wallet       12) Switch wallet
+11) Import wallet           13) Encrypt/decrypt wallet
+                            14) Delete wallet
+--------------------------------------------------------
+U) Check for updates         X) Disclaimer   
+S) Security settings         H) Help
+-------------------------------------------------------- 
 D) Donations 
------------------------------------------------------------------    
-E) Exit                          v $SCRIPT_VERSION"
+--------------------------------------------------------    
+E) Exit                      v $SCRIPT_VERSION"
 echo
 echo -e "${ORANGE}The Q1 WALLET is still in beta. Use at your own risk.${NC}"
 echo
