@@ -446,6 +446,7 @@ if ! setup_symlink; then
 fi
 
 # Launch the menu if requested
+echo
 read -p "Would you like to start Q1 Wallet now? (y/n): " start_now
 if [[ $start_now =~ ^[Yy]$ ]]; then
     ./menu.sh
