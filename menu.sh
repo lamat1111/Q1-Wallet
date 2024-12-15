@@ -15,7 +15,7 @@ NC='\033[0m'          # No Color - reset
 #=====================
 
 # Get current directory (where the script is running)
-QCLIENT_DIR="$(pwd)"
+QCLIENT_DIR="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"
 
 # Wallet management variables
 WALLETS_DIR="$QCLIENT_DIR/wallets"
