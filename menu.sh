@@ -259,9 +259,6 @@ check_qclient_binary() {
     #echo "Found binary: $QCLIENT_EXEC"
     #echo "Found config: $QCLIENT_DIR/.config"
     #echo "Config flag: $FLAGS"
-
-    # Test if everything is working
-    $QCLIENT_EXEC --version
 }
 
 # Function to cleanup old release files
