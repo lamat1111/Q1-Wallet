@@ -1,6 +1,6 @@
 #!/bin/bash
 
-SCRIPT_VERSION=1.7
+SCRIPT_VERSION=1.8
 INSTALL_DIR="$HOME/q1wallet"
 SYMLINK_PATH="/usr/local/bin/q1wallet"
 
@@ -147,6 +147,8 @@ confirm_full_reinstall() {
     # Create fresh installation directory
     echo "Creating fresh installation directory..."
     mkdir -p "$INSTALL_DIR"
+
+    cd $INSTALL_DIR
     
     return 0
 }
@@ -324,8 +326,6 @@ check_system_compatibility
 echo
 check_existing_installation
 echo
-check_dependencies
-echo
 
 # Add this section to ensure we're in the correct directory
 if [ "$PWD" != "$INSTALL_DIR" ]; then
@@ -335,6 +335,12 @@ if [ "$PWD" != "$INSTALL_DIR" ]; then
         exit 1
     }
 fi
+
+
+check_dependencies
+echo
+
+
 
 # Ask about wallet creation
 echo
