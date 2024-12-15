@@ -36,7 +36,7 @@ The menu includes the following options:
    - Check for updates
    - Help documentation
 
-## Installation
+## Linux Installation
 
 1. **Quick Installation**
    
@@ -64,6 +64,27 @@ The menu includes the following options:
 
    # Optional: add a symlink "q1wallet" to call the menu
    ```
+
+## Windows WSL Installation
+
+If you already have WSL ready, simply launch it in your terminal with `wsl` and then follow the Linux Installation method above.
+
+1. **Enable WSL**
+   - Open PowerShell as Administrator
+   - Run: `wsl --install`
+   - Restart your computer
+
+2. **Setup Ubuntu**
+   - Open "Ubuntu" from Start Menu
+   - Create username and password when prompted
+   - Update system: 
+     ```bash
+     sudo apt update && sudo apt upgrade -y
+     ```
+
+3. **Install Q1 Wallet**
+   - Follow the Linux Installation method above
+   - Launch the menu with: `cd ~/q1wallet && ./menu.sh` or simply `q1wallet`
 
 ## System Compatibility
 
