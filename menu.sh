@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Define the version number here
-SCRIPT_VERSION="1.1.5"
+SCRIPT_VERSION="1.1.6"
 
 # Color definitions
 RED='\033[1;31m'      # Bright red for errors
@@ -367,6 +367,17 @@ check_qclient_version() {
     fi
 }
 
+show_error_and_confirm() {
+    local error_msg="$1"
+    error_message "$error_msg"
+    echo
+    read -p "Return to main menu? (y/n): " choice
+    if [[ "$choice" =~ ^[Yy]$ ]]; then
+        main
+        return 1
+    fi
+}
+
 download_latest_qclient() {
     echo
     echo "Proceed to download the latest Qclient version? (y/n)"
@@ -567,8 +578,10 @@ check_coins() {
 create_transaction() {
     # First check if wallets are encrypted
     if ! check_wallet_encryption; then
+        show_error_and_confirm "Wallet encryption check failed"
         return 1
     fi
+    
     description="This will transfer a coin to another address.
 
 IMPORTANT:
@@ -577,39 +590,53 @@ IMPORTANT:
 - Account addresses and coin IDs have the same format - don't send to a coin address"
         
     if ! confirm_proceed "Create Transaction" "$description"; then
+        main
         return 1
     fi
 
     # Get and validate recipient address
     while true; do
-            echo
-        read -p "Enter the recipient's account address: " to_address
-        check_exit "$to_address" && return 1
+        echo
+        read -p "Enter the recipient's account address (or 'e' to exit): " to_address
+        if [[ "$to_address" == "e" ]]; then
+            echo "Transaction cancelled."
+            main
+            return 1
+        fi
+        
         if validate_hash "$to_address"; then
             break
         else
             error_message "Invalid address format. Address must start with '0x' followed by 64 hexadecimal characters."
             echo "Example: 0x7fe21cc8205c9031943daf4797307871fbf9ffe0851781acc694636d92712345"
             echo
+            continue
         fi
     done
 
-    # Get coin ID
+    # Show current coins
     echo
     echo "Your current coins before transaction:"
     echo "--------------------------------------"
     check_coins
     echo
     
+    # Get and validate coin ID
     while true; do
-        read -p "Enter the coin ID to transfer: " coin_id
-        check_exit "$coin_id" && return 1
+        read -p "Enter the coin ID to transfer (or 'e' to exit): " coin_id
+        if [[ "$coin_id" == "e" ]]; then
+            echo "Transaction cancelled."
+            main
+            return 1
+        fi
+        
         if validate_hash "$coin_id"; then
             break
         else
             error_message "Invalid coin ID format. ID must start with '0x' followed by 64 hexadecimal characters."
             echo "Example: 0x1148092cdce78c721835601ef39f9c2cd8b48b7787cbea032dd3913a4106a58d"
             echo
+            continue
         fi
     done
 
@@ -628,22 +655,35 @@ IMPORTANT:
     read -p "Do you want to proceed with this transaction? (y/n): " confirm
 
     if [[ ${confirm,,} == "y" ]]; then
-        eval "$cmd"
+        if ! eval "$cmd"; then
+            show_error_and_confirm "Transaction failed"
+            return 1
+        fi
+        
         echo
         echo "Transaction sent. The receiver does not need to accept it."
         
-        wait_with_spinner "Checking updated coins in %s seconds..." 30
+        if ! wait_with_spinner "Checking updated coins in %s seconds..." 30; then
+            show_error_and_confirm "Failed to update coin display"
+            return 1
+        fi
+        
         echo
         echo "Your coins after transaction:"
         echo "-----------------------------"
         check_coins
         echo
         echo "If you don't see the changes yet, wait a moment and check your coins again from the main menu."
+        main
+        return 0
     else
-        error_message "Transaction cancelled."
+        echo "Transaction cancelled."
+        main
+        return 1
     fi
 }
 
+# NOT USED
 # This one has both amount or ofcoin options, needs to be corrected
 create_transaction_qclient_2.1.x() {
     # First check if wallets are encrypted
@@ -756,6 +796,7 @@ IMPORTANT:
     fi
 }
 
+# NOT USED
 token_split() {
     # First check if wallets are encrypted
     if ! check_wallet_encryption; then
@@ -849,32 +890,44 @@ token_split() {
 token_split_advanced() {
     # First check if wallets are encrypted
     if ! check_wallet_encryption; then
+        show_error_and_confirm "Wallet encryption check failed"
         return 1
     fi
+    
     description="This will split a coin into multiple new coins (up to 50) using different methods"
 
     if ! confirm_proceed "Split Coins" "$description"; then
+        main
         return 1
     fi
 
-    # Show split options first
-    echo
-    echo "Choose split method:"
-    echo "1) Split in custom amounts"
-    echo "2) Split in equal amounts"
-    echo "3) Split by percentages"
-    echo
-    read -p "Enter your choice (1-3): " split_method
+    # Show split options in a loop until valid choice
+    while true; do
+        echo
+        echo "Choose split method:"
+        echo "1) Split in custom amounts"
+        echo "2) Split in equal amounts"
+        echo "3) Split by percentages"
+        echo
+        read -p "Enter your choice (1-3 or 'e' to exit): " split_method
 
-    case $split_method in
-        [1-3])  # Valid choice, continue
-            ;;
-        *)  error_message "Invalid choice"
-            return 1
-            ;;
-    esac
+        case $split_method in
+            "e")
+                echo "Operation cancelled."
+                main
+                return 1
+                ;;
+            [1-3])  # Valid choice, break the loop
+                break
+                ;;
+            *)  
+                error_message "Invalid choice. Please enter 1, 2, 3, or 'e' to exit."
+                continue
+                ;;
+        esac
+    done
 
-    # Now show coins and get coin selection
+    # Show coins and get coin selection
     echo
     echo "Your current coins:"
     echo "-----------------"
@@ -883,13 +936,18 @@ token_split_advanced() {
 
     # Get and validate the coin ID to split
     while true; do
-        read -p "Enter the coin ID to split: " coin_id
-        check_exit "$coin_id" && return 1
+        read -p "Enter the coin ID to split (or 'e' to exit): " coin_id
+        if [[ "$coin_id" == "e" ]]; then
+            echo "Operation cancelled."
+            main
+            return 1
+        fi
         if validate_hash "$coin_id"; then
             break
         else
             error_message "Invalid coin ID format. ID must start with '0x' followed by 64 hexadecimal characters."
             echo
+            continue
         fi
     done
 
@@ -898,7 +956,7 @@ token_split_advanced() {
     if [[ $coin_info =~ ([0-9]+\.[0-9]+)\ QUIL ]]; then
         total_amount=${BASH_REMATCH[1]}
     else
-        error_message "Could not determine coin amount. Please try again."
+        show_error_and_confirm "Could not determine coin amount. Please try again."
         return 1
     fi
 
@@ -909,11 +967,9 @@ token_split_advanced() {
     # Function to format decimal number with leading zero and trim trailing zeros
     format_decimal() {
         local num="$1"
-        # Ensure leading zero
         if [[ $num =~ ^\..*$ ]]; then
             num="0$num"
         fi
-        # Trim trailing zeros but maintain required decimals
         echo $num | sed 's/\.$//' | sed 's/0*$//'
     }
 
@@ -923,8 +979,14 @@ token_split_advanced() {
                 echo
                 echo "Enter amounts separated by comma (up to 100 values, must sum to $total_amount)"
                 echo "Example: 1.5,2.3,0.7"
-                read -p "> " amounts_input
+                read -p "> (or 'e' to exit) " amounts_input
                 
+                if [[ "$amounts_input" == "e" ]]; then
+                    echo "Operation cancelled."
+                    main
+                    return 1
+                fi
+
                 IFS=',' read -ra amounts <<< "$amounts_input"
                 
                 if [ ${#amounts[@]} -gt 100 ]; then
@@ -934,13 +996,19 @@ token_split_advanced() {
                 
                 # Calculate sum with full precision
                 sum=0
+                valid=true
                 for amount in "${amounts[@]}"; do
                     if [[ ! $amount =~ ^[0-9]*\.?[0-9]+$ ]]; then
                         error_message "Invalid amount format: $amount"
-                        continue 2
+                        valid=false
+                        break
                     fi
                     sum=$(echo "scale=12; $sum + $amount" | bc)
                 done
+
+                if [ "$valid" = false ]; then
+                    continue
+                fi
                 
                 # Compare with total amount (allowing for small rounding differences)
                 diff=$(echo "scale=12; ($sum - $total_amount)^2 < 0.000000000001" | bc)
@@ -962,7 +1030,12 @@ token_split_advanced() {
         2)  # Equal amounts
             while true; do
                 echo
-                read -p "Enter number of parts to split into (2-100): " num_parts
+                read -p "Enter number of parts to split into (2-100 or 'e' to exit): " num_parts
+                if [[ "$num_parts" == "e" ]]; then
+                    echo "Operation cancelled."
+                    main
+                    return 1
+                fi
                 if ! [[ "$num_parts" =~ ^[2-9]|[1-9][0-9]|100$ ]]; then
                     error_message "Please enter a number between 2 and 100"
                     continue
@@ -993,8 +1066,14 @@ token_split_advanced() {
                 echo
                 echo "Enter percentages separated by comma (must sum to 100)"
                 echo "Example: 50,30,20"
-                read -p "> " percentages_input
+                read -p "> (or 'e' to exit) " percentages_input
                 
+                if [[ "$percentages_input" == "e" ]]; then
+                    echo "Operation cancelled."
+                    main
+                    return 1
+                fi
+
                 IFS=',' read -ra percentages <<< "$percentages_input"
                 
                 if [ ${#percentages[@]} -gt 100 ]; then
@@ -1004,13 +1083,19 @@ token_split_advanced() {
                 
                 # Calculate sum of percentages
                 sum=0
+                valid=true
                 for pct in "${percentages[@]}"; do
                     if [[ ! $pct =~ ^[0-9]*\.?[0-9]+$ ]]; then
                         error_message "Invalid percentage format: $pct"
-                        continue 2
+                        valid=false
+                        break
                     fi
                     sum=$(echo "scale=12; $sum + $pct" | bc)
                 done
+
+                if [ "$valid" = false ]; then
+                    continue
+                fi
                 
                 # Check if percentages sum to 100
                 diff=$(echo "scale=12; ($sum - 100)^2 < 0.000000000001" | bc)
@@ -1031,10 +1116,6 @@ token_split_advanced() {
                     continue
                 fi
             done
-            ;;
-            
-        *)  error_message "Invalid choice"
-            return 1
             ;;
     esac
 
@@ -1061,150 +1142,193 @@ token_split_advanced() {
     echo "$cmd"
     echo
 
-    # Ask for confirmation
     read -p "Do you want to proceed with this split? (y/n): " confirm
-
     if [[ ${confirm,,} == "y" ]]; then
-        eval "$cmd"
+        if ! eval "$cmd"; then
+            show_error_and_confirm "Split operation failed"
+            return 1
+        fi
         
         # Show updated coins after split
         echo
-        wait_with_spinner "Showing your coins in %s secs..." 30
+        if ! wait_with_spinner "Showing your coins in %s secs..." 30; then
+            show_error_and_confirm "Failed to update coin display"
+            return 1
+        fi
+        
         echo
         echo "Your coins after splitting:"
         echo "---------------------------"
         check_coins
         echo
         echo "If you don't see the changes yet, wait a moment and check your coins again from the main menu."
+        main
+        return 0
     else
-        error_message "Split operation cancelled."
+        echo "Split operation cancelled."
+        main
+        return 1
     fi
 }
 
 token_merge() {
     # First check if wallets are encrypted
     if ! check_wallet_encryption; then
-        return 1
-    fi
-    description="This function allows you to merge either two specific coins or all your coins into a single coin"
-
-    if ! confirm_proceed "Merge Coins" "$description"; then
+        show_error_and_confirm "Wallet encryption check failed"
         return 1
     fi
     
-    # Display merge options first
-    echo
-    echo "Choose merge option:"
-    echo "1) Merge two specific coins"
-    echo "2) Merge all coins"
-    echo
-    read -p "Enter your choice (1-2): " merge_choice
+    description="This function allows you to merge either two specific coins or all your coins into a single coin"
 
-    case $merge_choice in
-        1)  # Merge two specific coins
-            echo
-            echo "Your current coins before merging:"
-            echo "----------------------------------"
-            coins_output=$($QCLIENT_EXEC token coins $FLAGS)
-            echo "$coins_output"
-            echo
+    if ! confirm_proceed "Merge Coins" "$description"; then
+        main
+        return 1
+    fi
+    
+    # Display merge options in a loop until valid choice or exit
+    while true; do
+        echo
+        echo "Choose merge option:"
+        echo "1) Merge two specific coins"
+        echo "2) Merge all coins"
+        echo
+        read -p "Enter your choice (1-2 or 'e' to exit): " merge_choice
 
-            # Count coins by counting lines containing "QUIL"
-            coin_count=$(echo "$coins_output" | grep -c "QUIL")
-
-            if [ "$coin_count" -lt 2 ]; then
-                error_message "Not enough coins to merge. You need at least 2 coins."
-                echo
-                read -p "Press Enter to return to the main menu..."
+        case $merge_choice in
+            "e")
+                echo "Operation cancelled."
+                main
                 return 1
-            fi
-            
-            # Get and validate the first coin ID
-            while true; do
-                read -p "Enter the first coin ID: " left_coin
-                check_exit "$left_coin" && return 1
-                if validate_hash "$left_coin"; then
-                    break
-                else
-                    error_message "Invalid coin ID format. ID must start with '0x' followed by 64 hexadecimal characters."
-                    echo
-                fi
-            done
+                ;;
+            1|2)  # Valid choice, break the loop
+                break
+                ;;
+            *)  
+                error_message "Invalid choice. Please enter 1, 2, or 'e' to exit."
+                continue
+                ;;
+        esac
+    done
 
-            # Get and validate the second coin ID
-            while true; do
-                read -p "Enter the second coin ID: " right_coin
-                check_exit "$right_coin" && return 1
-                if validate_hash "$right_coin"; then
-                    break
-                else
-                    error_message "Invalid coin ID format. ID must start with '0x' followed by 64 hexadecimal characters."
-                    echo
-                fi
-            done
+    # Process based on choice
+    if [ "$merge_choice" = "1" ]; then
+        echo
+        echo "Your current coins before merging:"
+        echo "----------------------------------"
+        coins_output=$($QCLIENT_EXEC token coins $FLAGS)
+        echo "$coins_output"
+        echo
 
-            # Show merge details and confirm
-            echo
-            echo "Merge Details:"
-            echo "--------------"
-            echo "First Coin: $left_coin"
-            echo "Second Coin: $right_coin"
-            echo
-            echo "Command that will be executed:"
-            echo "$QCLIENT_EXEC token merge $left_coin $right_coin $FLAGS"
-            echo
+        # Count coins by counting lines containing "QUIL"
+        coin_count=$(echo "$coins_output" | grep -c "QUIL")
 
-            read -p "Do you want to proceed with this merge? (y/n): " confirm
-            if [[ ${confirm,,} == "y" ]]; then
-                $QCLIENT_EXEC token merge "$left_coin" "$right_coin" $FLAGS
-            else
-                error_message "Merge operation cancelled."
-                return 1
-            fi
-            ;;
-
-        2)  # Merge all coins
-            # Verify we have enough coins to merge
-            coin_count=$($QCLIENT_EXEC token coins $FLAGS | grep -c "QUIL")
-            
-            if [ "$coin_count" -lt 2 ]; then
-                error_message "Not enough coins to merge. You need at least 2 coins."
-                echo
-                read -p "Press Enter to return to the main menu..."
-                return 1
-            fi
-
-            # Show command and confirm
-            echo "Command that will be executed:"
-            echo "$QCLIENT_EXEC token merge all $FLAGS"
-            echo
-            
-            read -p "Do you want to proceed with merging all coins? (y/n): " confirm
-            if [[ ${confirm,,} == "y" ]]; then
-                $QCLIENT_EXEC token merge all $FLAGS
-            else
-                error_message "Merge operation cancelled."
-                return 1
-            fi
-            ;;
-
-        *)  error_message "Invalid choice"
+        if [ "$coin_count" -lt 2 ]; then
+            show_error_and_confirm "Not enough coins to merge. You need at least 2 coins."
             return 1
-            ;;
-    esac
+        fi
+        
+        # Get and validate the first coin ID
+        while true; do
+            read -p "Enter the first coin ID (or 'e' to exit): " left_coin
+            if [[ "$left_coin" == "e" ]]; then
+                echo "Operation cancelled."
+                main
+                return 1
+            fi
+            if validate_hash "$left_coin"; then
+                break
+            else
+                error_message "Invalid coin ID format. ID must start with '0x' followed by 64 hexadecimal characters."
+                echo
+                continue
+            fi
+        done
 
-    # Show updated coins after merge
+        # Get and validate the second coin ID
+        while true; do
+            read -p "Enter the second coin ID (or 'e' to exit): " right_coin
+            if [[ "$right_coin" == "e" ]]; then
+                echo "Operation cancelled."
+                main
+                return 1
+            fi
+            if validate_hash "$right_coin"; then
+                break
+            else
+                error_message "Invalid coin ID format. ID must start with '0x' followed by 64 hexadecimal characters."
+                echo
+                continue
+            fi
+        done
+
+        # Show merge details and confirm
+        echo
+        echo "Merge Details:"
+        echo "--------------"
+        echo "First Coin: $left_coin"
+        echo "Second Coin: $right_coin"
+        echo
+        echo "Command that will be executed:"
+        echo "$QCLIENT_EXEC token merge $left_coin $right_coin $FLAGS"
+        echo
+
+        read -p "Do you want to proceed with this merge? (y/n): " confirm
+        if [[ ${confirm,,} == "y" ]]; then
+            if ! $QCLIENT_EXEC token merge "$left_coin" "$right_coin" $FLAGS; then
+                show_error_and_confirm "Merge operation failed"
+                return 1
+            fi
+        else
+            echo "Merge operation cancelled."
+            main
+            return 1
+        fi
+
+    else  # merge_choice = 2
+        # Verify we have enough coins to merge
+        coin_count=$($QCLIENT_EXEC token coins $FLAGS | grep -c "QUIL")
+        
+        if [ "$coin_count" -lt 2 ]; then
+            show_error_and_confirm "Not enough coins to merge. You need at least 2 coins."
+            return 1
+        fi
+
+        # Show command and confirm
+        echo "Command that will be executed:"
+        echo "$QCLIENT_EXEC token merge all $FLAGS"
+        echo
+        
+        read -p "Do you want to proceed with merging all coins? (y/n): " confirm
+        if [[ ${confirm,,} == "y" ]]; then
+            if ! $QCLIENT_EXEC token merge all $FLAGS; then
+                show_error_and_confirm "Merge operation failed"
+                return 1
+            fi
+        else
+            echo "Merge operation cancelled."
+            main
+            return 1
+        fi
+    fi
+
+    # Only show updated coins if merge was successful
     echo
-    wait_with_spinner "Showing your coins in %s secs..." 30
+    if ! wait_with_spinner "Showing your coins in %s secs..." 30; then
+        show_error_and_confirm "Failed to update coin display"
+        return 1
+    fi
+    
     echo
     echo "Your coins after merging:"
     echo "-------------------------"
     check_coins
     echo
     echo "If you don't see the changes yet, wait a moment and check your coins again from the main menu."
-    echo "If still nothing changes, you may want to try to execute the operation again."
+    main
+    return 0
 }
 
+# NOT USED
 token_merge_simple() {
     # First check if wallets are encrypted
     if ! check_wallet_encryption; then
@@ -1282,6 +1406,7 @@ token_merge_simple() {
     fi
 }
 
+# NOT USED
 token_merge_all() {
     # First check if wallets are encrypted
     if ! check_wallet_encryption; then
@@ -1344,66 +1469,91 @@ token_merge_all() {
     echo "If still nothing changes, you may want to try to execute the operation again."
 }
 
-# Function to create a new wallet
 create_new_wallet() {
     # First check if wallets are encrypted
     if ! check_wallet_encryption; then
+        show_error_and_confirm "Wallet encryption check failed"
         return 1
     fi
-    echo
-    echo "$(format_title "Create New Wallet")"
-    echo
+    
+    description="This will create a new wallet with its own address and configuration.\nNote: Use only lowercase letters, numbers, dashes (-) and underscores (_)"
+    
+    if ! confirm_proceed "Create New Wallet" "$description"; then
+        main
+        return 1
+    fi
     
     while true; do
-        read -p "Enter new wallet name: " new_wallet
+        read -p "Enter new wallet name (or 'e' to exit): " new_wallet
+        
+        if [[ "$new_wallet" == "e" ]]; then
+            echo "Operation cancelled."
+            main
+            return 1
+        fi
         
         # Validate wallet name (allowing letters, numbers, dashes, and underscores)
         if [[ ! "$new_wallet" =~ ^[a-z0-9_-]+$ ]]; then
-            error_message "Invalid wallet name. Use only lowercase letters, numbers, dashes (-) and underscores (_)."
+            error_message "Invalid wallet name. Use only lowercase letters, numbers, dashes (-) and underscores (_)"
             continue
         fi
         
         # Check if wallet already exists
         if [ -d "$WALLETS_DIR/$new_wallet" ]; then
-            error_message "Wallet '$new_wallet' already exists."
+            error_message "Wallet '$new_wallet' already exists"
             continue
         fi
         
         # Create new wallet directory structure
-        mkdir -p "$WALLETS_DIR/$new_wallet/.config"
-        
-        if [ $? -eq 0 ]; then
-            # Update current wallet
-            WALLET_NAME="$new_wallet"
-            echo "$WALLET_NAME" > "$CURRENT_WALLET_FILE"
-            FLAGS=$(get_config_flags)
-            
-            echo "✅ Created new wallet: $new_wallet"
-            echo "✅ Switched to new wallet"
-            #debug_info  # Debug output
-            echo
-            check_balance
-            break
-        else
-            error_message "Failed to create wallet directory"
-            break
+        if ! mkdir -p "$WALLETS_DIR/$new_wallet/.config"; then
+            show_error_and_confirm "Failed to create wallet directory"
+            return 1
         fi
+        
+        # Update current wallet
+        WALLET_NAME="$new_wallet"
+        if ! echo "$WALLET_NAME" > "$CURRENT_WALLET_FILE"; then
+            show_error_and_confirm "Failed to update current wallet file"
+            return 1
+        fi
+        
+        FLAGS=$(get_config_flags)
+        
+        echo
+        echo "✅ Created new wallet: $new_wallet"
+        echo "✅ Switched to new wallet"
+        echo
+        
+        # Check if balance command works with new wallet
+        if ! check_balance; then
+            show_error_and_confirm "Wallet created but balance check failed"
+            return 1
+        fi
+        
+        echo
+        echo "Your new wallet is ready to use!"
+        main
+        return 0
     done
 }
 
-# Function to switch between wallets
 switch_wallet() {
     # First check if wallets are encrypted
     if ! check_wallet_encryption; then
+        show_error_and_confirm "Wallet encryption check failed"
         return 1
     fi
-    echo
-    echo "$(format_title "Switch Wallet")"
-    echo
+    
+    description="This will allow you to switch between your existing wallets"
+    
+    if ! confirm_proceed "Switch Wallet" "$description"; then
+        main
+        return 1
+    fi
     
     # List available wallets
     if [ ! -d "$WALLETS_DIR" ]; then
-        error_message "No wallets directory found"
+        show_error_and_confirm "No wallets directory found"
         return 1
     fi
     
@@ -1417,91 +1567,28 @@ switch_wallet() {
     done < <(find "$WALLETS_DIR" -mindepth 1 -maxdepth 1 -type d)
     
     if [ ${#wallets[@]} -eq 0 ]; then
-        error_message "No valid wallets found"
+        show_error_and_confirm "No valid wallets found"
         return 1
     fi
-    
-    echo "Available wallets:"
-    echo "-----------------"
-    for i in "${!wallets[@]}"; do
-        if [ "${wallets[$i]}" == "$WALLET_NAME" ]; then
-            echo "$((i+1))) ${wallets[$i]} (current)"
-        else
-            echo "$((i+1))) ${wallets[$i]}"
-        fi
-    done
-    echo
-    
+
     while true; do
-        read -p "Select wallet number (1-${#wallets[@]}): " selection
+        echo
+        echo "Available wallets:"
+        echo "-----------------"
+        for i in "${!wallets[@]}"; do
+            if [ "${wallets[$i]}" == "$WALLET_NAME" ]; then
+                echo "$((i+1))) ${wallets[$i]} (current)"
+            else
+                echo "$((i+1))) ${wallets[$i]}"
+            fi
+        done
+        echo
         
-        # Validate input
-        if ! [[ "$selection" =~ ^[0-9]+$ ]] || \
-           [ "$selection" -lt 1 ] || \
-           [ "$selection" -gt ${#wallets[@]} ]; then
-            error_message "Invalid selection"
-            continue
-        fi
+        read -p "Select wallet number (1-${#wallets[@]} or 'e' to exit): " selection
         
-        # Switch wallet
-        new_wallet="${wallets[$((selection-1))]}"
-        WALLET_NAME="$new_wallet"
-        echo "$WALLET_NAME" > "$CURRENT_WALLET_FILE"
-        FLAGS=$(get_config_flags)  # Update FLAGS with new wallet
-        
-        echo "✅ Switched to wallet: $new_wallet"
-        break
-    done
-}
-# Function to delete a wallet
-delete_wallet() {
-    # First check if wallets are encrypted
-    if ! check_wallet_encryption; then
-        return 1
-    fi
-    echo
-    echo "$(format_title "Delete Wallet")"
-    echo
-    warning_message "Warning: This operation cannot be undone!\nYou will lose access to the wallet keys and funds."
-    echo
-    
-    # List available wallets
-    if [ ! -d "$WALLETS_DIR" ]; then
-        error_message "No wallets directory found"
-        return 1
-    fi
-    
-    # Only list directories that contain .config
-    wallets=()
-    while IFS= read -r dir; do
-        if [ -d "$dir/.config" ]; then
-            wallet_name=$(basename "$dir")
-            wallets+=("$wallet_name")
-        fi
-    done < <(find "$WALLETS_DIR" -mindepth 1 -maxdepth 1 -type d)
-    
-    if [ ${#wallets[@]} -eq 0 ]; then
-        error_message "No valid wallets found"
-        return 1
-    fi
-    
-    echo "Available wallets:"
-    echo "-----------------"
-    for i in "${!wallets[@]}"; do
-        if [ "${wallets[$i]}" == "$WALLET_NAME" ]; then
-            echo "$((i+1))) ${wallets[$i]} (current)"
-        else
-            echo "$((i+1))) ${wallets[$i]}"
-        fi
-    done
-    echo
-    
-    while true; do
-        read -p "Select wallet number to delete (1-${#wallets[@]}) or 'e' to exit: " selection
-        
-        # Check for exit
-        if [[ ${selection,,} == "e" ]]; then
+        if [[ "$selection" == "e" ]]; then
             echo "Operation cancelled."
+            main
             return 1
         fi
         
@@ -1509,7 +1596,113 @@ delete_wallet() {
         if ! [[ "$selection" =~ ^[0-9]+$ ]] || \
            [ "$selection" -lt 1 ] || \
            [ "$selection" -gt ${#wallets[@]} ]; then
-            error_message "Invalid selection"
+            error_message "Invalid selection. Please choose a number between 1 and ${#wallets[@]}"
+            continue
+        fi
+        
+        # Get selected wallet name
+        new_wallet="${wallets[$((selection-1))]}"
+        
+        # Check if trying to switch to current wallet
+        if [ "$new_wallet" == "$WALLET_NAME" ]; then
+            error_message "Already using this wallet"
+            continue
+        fi
+        
+        # Confirm switch
+        echo
+        echo "You are about to switch to wallet: $new_wallet"
+        read -p "Do you want to proceed? (y/n): " confirm
+        
+        if [[ ${confirm,,} == "y" ]]; then
+            # Switch wallet
+            WALLET_NAME="$new_wallet"
+            if ! echo "$WALLET_NAME" > "$CURRENT_WALLET_FILE"; then
+                show_error_and_confirm "Failed to update current wallet file"
+                return 1
+            fi
+            
+            FLAGS=$(get_config_flags)  # Update FLAGS with new wallet
+            
+            echo
+            echo "✅ Switched to wallet: $new_wallet"
+            echo
+            
+            # Verify switch by checking balance
+            if ! check_balance; then
+                show_error_and_confirm "Wallet switch completed but balance check failed"
+                return 1
+            fi
+            
+            main
+            return 0
+        else
+            echo "Switch cancelled."
+            continue
+        fi
+    done
+}
+
+delete_wallet() {
+    # First check if wallets are encrypted
+    if ! check_wallet_encryption; then
+        show_error_and_confirm "Wallet encryption check failed"
+        return 1
+    fi
+    
+    description="⚠️  WARNING: This operation cannot be undone!\nYou will lose access to the wallet keys and funds."
+    
+    if ! confirm_proceed "Delete Wallet" "$description"; then
+        main
+        return 1
+    fi
+    
+    # List available wallets
+    if [ ! -d "$WALLETS_DIR" ]; then
+        show_error_and_confirm "No wallets directory found"
+        return 1
+    fi
+    
+    # Only list directories that contain .config
+    wallets=()
+    while IFS= read -r dir; do
+        if [ -d "$dir/.config" ]; then
+            wallet_name=$(basename "$dir")
+            wallets+=("$wallet_name")
+        fi
+    done < <(find "$WALLETS_DIR" -mindepth 1 -maxdepth 1 -type d)
+    
+    if [ ${#wallets[@]} -eq 0 ]; then
+        show_error_and_confirm "No valid wallets found"
+        return 1
+    fi
+
+    while true; do
+        echo
+        echo "Available wallets:"
+        echo "-----------------"
+        for i in "${!wallets[@]}"; do
+            if [ "${wallets[$i]}" == "$WALLET_NAME" ]; then
+                echo "$((i+1))) ${wallets[$i]} (current)"
+            else
+                echo "$((i+1))) ${wallets[$i]}"
+            fi
+        done
+        echo
+        
+        read -p "Select wallet number to delete (1-${#wallets[@]} or 'e' to exit): " selection
+        
+        if [[ "$selection" == "e" ]]; then
+            echo "Operation cancelled."
+            main
+            return 1
+        fi
+        
+        # Validate input
+        if ! [[ "$selection" =~ ^[0-9]+$ ]] || \
+           [ "$selection" -lt 1 ] || \
+           [ "$selection" -gt ${#wallets[@]} ]; then
+            error_message "Invalid selection. Please choose a number between 1 and ${#wallets[@]}"
             continue
         fi
         
@@ -1518,102 +1711,176 @@ delete_wallet() {
         
         # Prevent deletion of current wallet
         if [ "$selected_wallet" == "$WALLET_NAME" ]; then
-            error_message "Cannot delete the currently active wallet."
-            echo "Please switch to a different wallet first."
-            return 1
+            error_message "Cannot delete the currently active wallet. Please switch to a different wallet first"
+            continue
         fi
         
         echo
         warning_message "You are about to delete wallet: $selected_wallet"
-        read -p "Are you sure you want to delete this wallet? (y/n): " confirm
+        echo "This action cannot be undone and you will lose all access to this wallet!"
+        read -p "Are you absolutely sure you want to delete this wallet? (y/n): " confirm
         
         if [[ ${confirm,,} == "y" ]]; then
-            # Proceed with deletion
-            if rm -rf "$WALLETS_DIR/$selected_wallet"; then
-                echo "✅ Wallet '$selected_wallet' has been deleted."
+            # Double confirmation for safety
+            echo
+            echo "Final confirmation required."
+            read -p "Type the wallet name '$selected_wallet' to confirm deletion: " confirmation
+            
+            if [[ "$confirmation" == "$selected_wallet" ]]; then
+                # Proceed with deletion
+                if rm -rf "$WALLETS_DIR/$selected_wallet"; then
+                    echo
+                    echo "✅ Wallet '$selected_wallet' has been deleted."
+                    main
+                    return 0
+                else
+                    show_error_and_confirm "Error occurred while deleting the wallet"
+                    return 1
+                fi
             else
-                error_message "Error occurred while deleting the wallet."
+                error_message "Wallet name confirmation did not match. Deletion cancelled"
+                continue
             fi
         else
-            echo "Operation cancelled."
+            echo "Deletion cancelled."
+            continue
         fi
-        break
     done
 }
 
 encrypt_decrypt_wallets() {
-    echo
-    echo "$(format_title "Wallet Encryption")"
-    echo
+    description="This will encrypt or decrypt your wallet files for security"
+    
+    if ! confirm_proceed "Wallet Encryption" "$description"; then
+        main
+        return 1
+    fi
 
     # Check current state
     if [ -f "$QCLIENT_DIR/wallets.zip" ] && [ ! -d "$WALLETS_DIR" ]; then
         # Encrypted state: only offer decrypt option
         echo "Current status: Wallets are encrypted"
         echo
-        read -p "Decrypt your wallets? (y/n): " choice
-        if [[ "$choice" =~ ^[Yy]$ ]]; then
-            echo
-            read -s -p "Password: " password
-            echo  # New line after hidden password input
-            
-            if unzip -qq -P "$password" "$QCLIENT_DIR/wallets.zip" -d "$QCLIENT_DIR"; then
-                if [ -d "$WALLETS_DIR" ]; then
+        
+        while true; do
+            read -p "Decrypt your wallets? (y/n or 'e' to exit): " choice
+            case $choice in
+                [Yy])
+                    echo
+                    read -s -p "Password: " password
+                    echo  # New line after hidden password input
+                    
+                    if ! unzip -qq -P "$password" "$QCLIENT_DIR/wallets.zip" -d "$QCLIENT_DIR"; then
+                        error_message "Decryption failed - incorrect password"
+                        continue
+                    fi
+                    
+                    if [ ! -d "$WALLETS_DIR" ]; then
+                        error_message "Decryption failed - archive may be corrupted"
+                        continue
+                    fi
+                    
                     echo "✅ Wallets decrypted successfully"
                     echo "Removing encrypted archive..."
-                    rm "$QCLIENT_DIR/wallets.zip"
+                    if ! rm "$QCLIENT_DIR/wallets.zip"; then
+                        show_error_and_confirm "Warning: Could not remove encrypted archive"
+                        return 1
+                    fi
                     echo "✅ Operation completed"
-                else
-                    error_message "Decryption verification failed"
-                fi
-            else
-                error_message "Decryption failed"
-            fi
-        else
-            echo "Operation cancelled"
-        fi
+                    main
+                    return 0
+                    ;;
+                [Nn])
+                    echo "Operation cancelled."
+                    main
+                    return 1
+                    ;;
+                "e")
+                    echo "Operation cancelled."
+                    main
+                    return 1
+                    ;;
+                *)
+                    error_message "Please answer y or n"
+                    continue
+                    ;;
+            esac
+        done
+        
     elif [ -d "$WALLETS_DIR" ] && [ ! -f "$QCLIENT_DIR/wallets.zip" ]; then
         # Unencrypted state: only offer encrypt option
         echo "Current status: Wallets are unprotected"
         echo
         warning_message "IMPORTANT: If you lose the password, your wallets cannot be recovered!"
-        echo "Make sure to use a strong password and store it securely."
+        warning_message "Make sure to use a strong password and store it securely."
         echo
-        read -p "Encrypt your wallets? (y/n): " choice
-        if [[ "$choice" =~ ^[Yy]$ ]]; then
-            echo
-            cd "$QCLIENT_DIR" || return 1
-            
-            # Create encrypted zip without showing the file list
-            if zip -qq -r -e wallets.zip wallets/; then
-                if [ -s wallets.zip ]; then
+        
+        while true; do
+            read -p "Encrypt your wallets? (y/n or 'e' to exit): " choice
+            case $choice in
+                [Yy])
+                    echo
+                    if ! cd "$QCLIENT_DIR"; then
+                        show_error_and_confirm "Failed to access wallet directory"
+                        return 1
+                    fi
+                    
+                    # Create encrypted zip without showing the file list
+                    if ! zip -qq -r -e wallets.zip wallets/; then
+                        show_error_and_confirm "Encryption failed"
+                        rm -f wallets.zip  # Clean up if failed
+                        return 1
+                    fi
+                    
+                    if [ ! -s wallets.zip ]; then
+                        show_error_and_confirm "Encryption verification failed"
+                        rm -f wallets.zip
+                        return 1
+                    fi
+                    
                     echo "✅ Encryption successful"
                     echo "Removing unencrypted wallets..."
-                    rm -rf "$WALLETS_DIR"
+                    if ! rm -rf "$WALLETS_DIR"; then
+                        show_error_and_confirm "Warning: Could not remove unencrypted wallets"
+                        return 1
+                    fi
                     echo "✅ Operation completed"
                     echo
                     echo "Your wallets are now encrypted in: $QCLIENT_DIR/wallets.zip"
                     echo "Keep this file and your password safe!"
-                else
-                    error_message "Encryption verification failed"
-                    rm -f wallets.zip
-                fi
-            else
-                error_message "Encryption failed"
-            fi
-        else
-            echo "Operation cancelled"
-        fi
+                    main
+                    return 0
+                    ;;
+                [Nn])
+                    echo "Operation cancelled."
+                    main
+                    return 1
+                    ;;
+                "e")
+                    echo "Operation cancelled."
+                    main
+                    return 1
+                    ;;
+                *)
+                    error_message "Please answer y or n"
+                    continue
+                    ;;
+            esac
+        done
+        
     else
         # Invalid state (both or neither exist)
         if [ -f "$QCLIENT_DIR/wallets.zip" ] && [ -d "$WALLETS_DIR" ]; then
-            error_message "Invalid state: Both encrypted and unencrypted wallets found"
-            echo "Please manually remove either wallets.zip or the wallets directory"
+            show_error_and_confirm "Invalid state: Both encrypted and unencrypted wallets found.\nPlease manually remove either wallets.zip or the wallets directory"
+            return 1
         else
-            error_message "No wallets found to encrypt/decrypt"
+            show_error_and_confirm "No wallets found to encrypt/decrypt"
+            return 1
         fi
     fi
 }
+
+# NOT USED
 count_coins() {
     echo
     echo "$(format_title "Count Coins")"
@@ -1637,7 +1904,6 @@ count_coins() {
     echo "Total value: $total_value QUIL"
     echo
 }
-
 
 help() {
     cat << EOF
@@ -1828,7 +2094,7 @@ main() {
             [dD]) donations; press_any_key ;;
             [xX]) disclaimer; press_any_key ;;
             [hH]) help; press_any_key ;;
-            [eE]) echo; break ;;
+            [eE]) echo; exit 0 ;;
             *) echo "Invalid option, please try again." ;;
         esac
     done
