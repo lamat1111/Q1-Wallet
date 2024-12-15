@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Define the version number here
-SCRIPT_VERSION="1.2"
+SCRIPT_VERSION="1.3"
 
 # Color definitions
 RED='\033[1;31m'      # Bright red for errors
@@ -24,8 +24,13 @@ CURRENT_WALLET_FILE="$QCLIENT_DIR/.current_wallet"
 # Initialize current wallet
 if [ -f "$CURRENT_WALLET_FILE" ]; then
     WALLET_NAME=$(cat "$CURRENT_WALLET_FILE")
+elif check_existing_wallets; then
+    # Get the first wallet found
+    WALLET_NAME=$(find "$WALLETS_DIR" -mindepth 2 -maxdepth 2 -type f -name "config.yml" | head -n1 | awk -F'/' '{print $(NF-2)}')
+    echo "$WALLET_NAME" > "$CURRENT_WALLET_FILE"
 else
-    WALLET_NAME="wallet_1"
+    # No existing wallets found, create default
+    WALLET_NAME="Wallet_1"
     echo "$WALLET_NAME" > "$CURRENT_WALLET_FILE"
     # Create initial wallet structure
     mkdir -p "$WALLETS_DIR/$WALLET_NAME/.config"
@@ -451,6 +456,17 @@ check_wallet_encryption() {
         fi
     fi
     return 0  # Wallets are not encrypted
+}
+
+# Check for existing wallets
+check_existing_wallets() {
+    if [ -d "$WALLETS_DIR" ]; then
+        # Look for any directory containing .config/config.yml
+        if find "$WALLETS_DIR" -mindepth 2 -maxdepth 2 -type f -name "config.yml" | grep -q .; then
+            return 0 # Found existing wallet(s)
+        fi
+    fi
+    return 1 # No existing wallets found
 }
 
 
