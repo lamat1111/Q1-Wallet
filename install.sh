@@ -1,6 +1,6 @@
 #!/bin/bash
 
-SCRIPT_VERSION=1.4
+SCRIPT_VERSION=1.5
 INSTALL_DIR="$HOME/q1wallet"
 
 # Color definitions
@@ -142,6 +142,11 @@ confirm_full_reinstall() {
     
     echo "Removing existing installation..."
     rm -rf "$INSTALL_DIR"
+    
+    # Create fresh installation directory
+    echo "Creating fresh installation directory..."
+    mkdir -p "$INSTALL_DIR"
+    
     return 0
 }
 
@@ -195,6 +200,49 @@ check_dependencies() {
     fi
     
     success_message "Successfully installed all dependencies!"
+}
+
+check_wallet_exists() {
+    local wallet_name="$1"
+    if [ -d "wallets/$wallet_name" ]; then
+        return 0  # wallet exists
+    fi
+    return 1  # wallet doesn't exist
+}
+
+handle_wallet_creation() {
+    if [[ -n "$wallet_name" ]]; then
+        # For software-only reinstall, check if wallet already exists
+        if [ -d "wallets/$wallet_name" ]; then
+            warning_message "Wallet '$wallet_name' already exists"
+            read -p "Would you like to create a different wallet? (y/n): " create_different
+            if [[ $create_different =~ ^[Yy]$ ]]; then
+                while true; do
+                    echo
+                    read -p "Enter new wallet name (a-z, 0-9, -, _): " wallet_name
+                    
+                    if [[ ! "$wallet_name" =~ ^[a-z0-9_-]+$ ]]; then
+                        error_message "Invalid wallet name. Use only lowercase letters, numbers, dashes (-) and underscores (_)."
+                        continue
+                    fi
+                    
+                    if check_wallet_exists "$wallet_name"; then
+                        error_message "Wallet '$wallet_name' already exists. Please choose a different name."
+                        continue
+                    fi
+                    break
+                done
+            else
+                wallet_name=""  # Clear wallet_name if user doesn't want to create a different one
+                return
+            fi
+        fi
+        
+        echo "Creating wallet: $wallet_name"
+        mkdir -p "wallets/$wallet_name/.config"
+        echo "$wallet_name" > .current_wallet
+        success_message "Wallet '$wallet_name' created successfully"
+    fi
 }
 
 setup_symlink() {
@@ -289,10 +337,15 @@ wallet_name=""
 if [[ $create_wallet =~ ^[Yy]$ ]]; then
     while true; do
         echo
-        read -p "Enter wallet name (a-z, 0-9, -, _): " wallet_name
+        read -p "Enter wallet name (no spaces): " wallet_name
         
-        if [[ ! "$wallet_name" =~ ^[a-z0-9_-]+$ ]]; then
-            error_message "Invalid wallet name. Use only lowercase letters, numbers, dashes (-) and underscores (_)."
+        if [[ ! "$wallet_name" =~ ^[A-Za-z0-9_-]+$ ]]; then
+            error_message "Invalid wallet name. Use only letters, numbers, dashes (-) and underscores (_)."
+            continue
+        fi
+        
+        if check_wallet_exists "$wallet_name"; then
+            error_message "Wallet '$wallet_name' already exists. Please choose a different name."
             continue
         fi
         break
