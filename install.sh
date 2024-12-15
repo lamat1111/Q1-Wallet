@@ -321,8 +321,11 @@ echo -e "
 
 # Run initial checks
 check_system_compatibility
+echo
 check_existing_installation
+echo
 check_dependencies
+echo
 
 # Add this section to ensure we're in the correct directory
 if [ "$PWD" != "$INSTALL_DIR" ]; then
@@ -334,6 +337,7 @@ if [ "$PWD" != "$INSTALL_DIR" ]; then
 fi
 
 # Ask about wallet creation
+echo
 read -p "Would you like to create a new wallet now? (y/n): " create_wallet
 wallet_name=""
 
