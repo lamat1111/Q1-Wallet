@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Define the version number here
-SCRIPT_VERSION="1.1.9"
+SCRIPT_VERSION="1.2.0"
 
 # Color definitions
 RED='\033[1;31m'      # Bright red for errors
@@ -2058,14 +2058,14 @@ main() {
         read -rp "Enter your choice: " choice
         
         case $choice in
-            1) check_balance; prompt_return_to_menu || break ;;
-            2) create_transaction; prompt_return_to_menu || break ;;
-            3) accept_transaction; prompt_return_to_menu || break ;;
-            4) reject_transaction; prompt_return_to_menu || break ;;
-            5) mutual_transfer; prompt_return_to_menu || break ;;
-            6) check_coins; prompt_return_to_menu || break ;;
-            7) token_merge && prompt_return_to_menu || break ;;
-            8) token_split_advanced && prompt_return_to_menu || break;;
+            1) check_balance; press_any_key ;;
+            2) create_transaction; press_any_key ;;
+            3) accept_transaction; press_any_key ;;
+            4) reject_transaction; press_any_key ;;
+            5) mutual_transfer; press_any_key ;;
+            6) check_coins; press_any_key ;;
+            7) token_merge; press_any_key ;;
+            8) token_split_advanced; press_any_key ;;
             10) create_new_wallet; press_any_key ;;
             11) import_wallet; press_any_key ;;
             12) switch_wallet; press_any_key ;;
