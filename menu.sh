@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Define the version number here
-SCRIPT_VERSION="1.1.8"
+SCRIPT_VERSION="1.1.9"
 
 # Color definitions
 RED='\033[1;31m'      # Bright red for errors
@@ -1619,8 +1619,7 @@ switch_wallet() {
         echo "✅ Switched to wallet: $new_wallet"
         echo
         
-        # Verify switch by checking balance
-        check_balance
+        # Back to menu
         main
         return 0
     done
