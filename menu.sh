@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Define the version number here
-SCRIPT_VERSION="1.2.0"
+SCRIPT_VERSION="1.2.1"
 
 # Color definitions
 RED='\033[1;31m'      # Bright red for errors
@@ -65,8 +65,8 @@ display_menu() {
                Q1 |  Q1 |  Q1 |  
                Q1  Q1Q1 |  Q1 |  
                \Q1Q1Q1 / Q1Q1Q1\ 
-               \___Q1Q\ \______|  QUILIBRIUM.ONE
-                   \___|        
+                \___Q1Q\ \______|  QUILIBRIUM.ONE
+                    \___|        
                               
 ========================================================"
     echo -e "${BOLD}Q1 WALLET (BETA) ${PURPLE}${BOLD}>> $WALLET_NAME${NC}"
