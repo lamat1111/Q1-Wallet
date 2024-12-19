@@ -109,6 +109,28 @@ Requirements:
 - Optional encryption for wallet storage is available via zip/unzip of the "wallets" folder
 - Regular updates are provided through the GitHub repository
 
+## Enhancing Usability for the Q1Wallet
+
+This repository contains a terminal-based menu script for creating and managing Quilibrium wallets. Below are some ideas to further improve usability, bridging the gap between a traditional CLI and a full GUI application:
+
+1. **Executable with Embedded Script**  
+   - Package the script into a standalone executable using tools like `pyinstaller` (Python).  
+   - Users can launch the application by double-clicking, simplifying the experience.
+
+2. **Enhanced Terminal Interface**  
+   - Add colored output for better readability (e.g., `colorama` in Python).  
+   - Use libraries like Prompt Toolkit to enable richer input handling (e.g., autocomplete, dropdowns).
+
+3. **Bundled Terminal Emulator**  
+   - Distribute the wallet with a lightweight terminal emulator (e.g., Mintty, ConEmu).  
+   - Ensures a consistent user experience without requiring external terminal configurations.
+
+4. **Minimal TUI (Text User Interface)**  
+   - Use libraries like `dialog` (Bash) or `npyscreen` (Python) to create interactive menus navigable with arrow keys.
+
+These enhancements aim to maintain the lightweight and portable nature of the script while offering a more polished and user-friendly experience.
+See this [ChatGPT discussion](https://chatgpt.com/share/6761ae54-d1cc-8007-b3f8-3cfcf66b8551) for more details.
+
 ## Licence
 
 CC - Attribution-NonCommercial-ShareAlike 4.0 International
