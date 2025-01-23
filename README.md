@@ -53,9 +53,7 @@ The menu includes the following options:
    ```
    **IMPORTANT SECURITY STEPS: DO THIS AFTER THE INSTALLATION**  
 
-   After creating your wallet, it’s highly recommended to back up the two key files located in:  
-   `$HOME/q1wallet/wallets/wallet_name`  
-   (where "wallet_name" is the name you chose for your wallet).  
+   After creating your wallet, it’s highly recommended to back up the two key files located in: `$HOME/q1wallet/wallets/wallet_name` (where "wallet_name" is the name you chose for your wallet).  
 
    Store these files securely on an encrypted USB drive and avoid uploading them online.  
    Without a backup, a hardware failure on your PC could result in the permanent loss of access to your tokens. Protect your keys to ensure your assets remain safe.  
