@@ -40,42 +40,45 @@ The menu includes the following options:
 
 ## Linux Installation
 
-1. **Quick Installation (recommended)**
-   
-   ```bash
-   # This will install in the folder ~/q1wallet
+### Quick Installation (recommended)
 
-   cd && \
-   mkdir -p ~/q1wallet && \
-   curl -sSL "https://raw.githubusercontent.com/lamat1111/Q1-Wallet/main/install.sh" -o ~/q1wallet/install.sh && \
-   chmod +x ~/q1wallet/install.sh && \
-   ~/q1wallet/install.sh
-   ```
-   **IMPORTANT SECURITY STEPS: DO THIS AFTER THE INSTALLATION**  
+Run this snippet in your terminal:
 
-   After creating your wallet, it’s highly recommended to back up the two key files located in: `$HOME/q1wallet/wallets/wallet_name` (where "wallet_name" is the name you chose for your wallet).  
+```bash
+# This will install in the folder ~/q1wallet
 
-   Store these files securely on an encrypted USB drive and avoid uploading them online.  
-   Without a backup, a hardware failure on your PC could result in the permanent loss of access to your tokens. Protect your keys to ensure your assets remain safe.  
+cd && \
+mkdir -p ~/q1wallet && \
+curl -sSL "https://raw.githubusercontent.com/lamat1111/Q1-Wallet/main/install.sh" -o ~/q1wallet/install.sh && \
+chmod +x ~/q1wallet/install.sh && \
+~/q1wallet/install.sh
+```
 
-   To enhance security, use the "Encrypt Wallet" option in the menu when you're not actively using your wallet(s). This feature stores your wallet(s) files in a .zip archive protected by a password of your choice.
+**IMPORTANT SECURITY STEPS: DO THIS AFTER THE INSTALLATION**  
 
-   This extra step is crucial in case a hacker gains access to your files, as it helps prevent unauthorized access to your wallet keys.
+After creating your wallet, it’s highly recommended to back up the two key files located in: `$HOME/q1wallet/wallets/wallet_name` (where "wallet_name" is the name you chose for your wallet).  
 
-2. **Manual Installation**
-   ```bash
-   # Create directory
-   mkdir q1wallet && cd q1wallet
+Store these files securely on an encrypted USB drive and avoid uploading them online.  
+Without a backup, a hardware failure on your PC could result in the permanent loss of access to your tokens. Protect your keys to ensure your assets remain safe.  
 
-   # Download the script
-   curl -O https://raw.githubusercontent.com/lamat1111/Q1-Wallet/main/menu.sh
-   chmod +x menu.sh
+To enhance security, use the "Encrypt Wallet" option in the menu when you're not actively using your wallet(s). This feature stores your wallet(s) files in a .zip archive protected by a password of your choice.
 
-   # Run the wallet
-   ./menu.sh
+This extra step is crucial in case a hacker gains access to your files, as it helps prevent unauthorized access to your wallet keys.
 
-   # Optional: add a symlink "q1wallet" to call the menu
-   ```
+### Manual Installation
+```bash
+# Create directory
+mkdir q1wallet && cd q1wallet
+
+# Download the script
+curl -O https://raw.githubusercontent.com/lamat1111/Q1-Wallet/main/menu.sh
+chmod +x menu.sh
+
+# Run the wallet
+./menu.sh
+
+# Optional: add a symlink "q1wallet" to call the menu
+```
 
 ## Windows WSL Installation
 
@@ -95,7 +98,7 @@ If you already have WSL ready, simply launch it in your terminal with `wsl` and 
      ```
 
 3. **Install Q1 Wallet**
-   - Follow the Linux Installation method above
+   - Follow the "Linux Quick Installation" method above
    - Launch the menu with: `cd ~/q1wallet && ./menu.sh` or simply `q1wallet`
 
 ## System Compatibility
