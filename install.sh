@@ -17,7 +17,7 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 # =============================================================================
 
-SCRIPT_VERSION=1.1.3
+SCRIPT_VERSION=1.1.4
 INSTALL_DIR="$HOME/q1wallet"
 SYMLINK_PATH="/usr/local/bin/q1wallet"
 
@@ -476,6 +476,27 @@ echo "Location: $(pwd)"
 if [[ -n "$wallet_name" ]]; then
     echo "Wallet created: $wallet_name"
 fi
+echo
+echo
+echo "IMPORTANT SECURITY STEPS:"
+echo "------------------------"
+echo "1. Back up your wallet keys:"
+echo "   After creating your wallet, locate the two key files in:"
+echo "   $HOME/q1wallet/wallets/$wallet_name"
+echo
+echo "   Copy these files to an encrypted USB drive for secure storage."
+echo "   DO NOT upload them online to prevent unauthorized access."
+echo "   Without a backup of your wallet keys, a PC hardware failure"
+echo "   could result in permanent loss of access to your tokens."
+echo "   Always ensure your keys are safely backed up."
+echo
+echo "2. Encrypt your wallet files:"
+echo "   Use the 'Encrypt Wallet' option from the menu to store your wallet files"
+echo "   in a .zip archive secured with a password of your choice when you are not using the wallet."
+echo "   This step is essential to protect your keys if a hacker gains access to your files."
+echo
+echo "By following these steps, you ensure your assets remain safe and secure."
+echo
 echo
 
 if ! setup_symlink; then
