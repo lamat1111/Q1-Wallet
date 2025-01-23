@@ -40,7 +40,7 @@ The menu includes the following options:
 
 ## Linux Installation
 
-1. **Quick Installation**
+1. **Quick Installation (recommended)**
    
    ```bash
    # This will install in the folder ~/q1wallet
