@@ -133,4 +133,4 @@ See this [ChatGPT discussion](https://chatgpt.com/share/6761ae54-d1cc-8007-b3f8-
 
 ## Licence
 
-CC - Attribution-NonCommercial-ShareAlike 4.0 International
+GNU AFFERO GENERAL PUBLIC LICENSE
