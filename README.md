@@ -51,6 +51,18 @@ The menu includes the following options:
    chmod +x ~/q1wallet/install.sh && \
    ~/q1wallet/install.sh
    ```
+   **IMPORTANT SECURITY STEPS: DO THIS AFTER THE INSTALLATION**  
+
+   After creating your wallet, it’s highly recommended to back up the two key files located in:  
+   `$HOME/q1wallet/wallets/wallet_name`  
+   (where "wallet_name" is the name you chose for your wallet).  
+
+   Store these files securely on an encrypted USB drive and avoid uploading them online.  
+   Without a backup, a hardware failure on your PC could result in the permanent loss of access to your tokens. Protect your keys to ensure your assets remain safe.  
+
+   To enhance security, use the "Encrypt Wallet" option in the menu when you're not actively using your wallet(s). This feature stores your wallet(s) files in a .zip archive protected by a password of your choice.
+
+   This extra step is crucial in case a hacker gains access to your files, as it helps prevent unauthorized access to your wallet keys.
 
 2. **Manual Installation**
    ```bash
