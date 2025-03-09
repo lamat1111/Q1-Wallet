@@ -102,7 +102,7 @@ Store these securely on an encrypted USB drive and do not upload online. Without
 ## System Compatibility
 - **Linux**: x86_64 (amd64), aarch64 (arm64)
 - **macOS**: x86_64 (amd64), arm64 (Apple Silicon)
-- NOT YET **Windows**: x86_64/amd64 (Native or WSL)
+- **Windows**: x86_64/amd64 (Native or WSL) - The qclient binary does not exist for native Windows yet!
 
 ## Requirements:
 - Python 3.6+ with pip  
