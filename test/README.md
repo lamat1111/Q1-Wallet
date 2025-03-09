@@ -44,7 +44,7 @@ The menu includes the following options:
 ### Linux
 ```bash
 cd && mkdir -p q1wallet && cd q1wallet
-curl -sSL https://raw.githubusercontent.com/lamat1111/Q1-Wallet/main/install.py -o install.py
+curl -sSL https://raw.githubusercontent.com/lamat1111/Q1-Wallet/main/test/install.py -o install.py
 chmod +x install.py
 python3 install.py
 ```
@@ -57,7 +57,7 @@ brew install python3
 Install:
 ```bash
 cd && mkdir -p q1wallet && cd q1wallet
-curl -sSL https://raw.githubusercontent.com/lamat1111/Q1-Wallet/main/install.py -o install.py
+curl -sSL https://raw.githubusercontent.com/lamat1111/Q1-Wallet/main/test/install.py -o install.py
 chmod +x install.py
 python3 install.py
 ```
@@ -69,7 +69,7 @@ Install Python 3 from python.org (check "Add Python to PATH").
 Open Command Prompt or PowerShell:
 ```bash
 cd %USERPROFILE% && mkdir q1wallet && cd q1wallet
-curl -O https://raw.githubusercontent.com/lamat1111/Q1-Wallet/main/install.py
+curl -O https://raw.githubusercontent.com/lamat1111/Q1-Wallet/main/test/install.py
 python install.py
 ```
 
@@ -87,7 +87,7 @@ sudo apt update && sudo apt upgrade -y
 Install:
 ```bash
 cd && mkdir -p q1wallet && cd q1wallet
-curl -sSL https://raw.githubusercontent.com/lamat1111/Q1-Wallet/main/install.py -o install.py
+curl -sSL https://raw.githubusercontent.com/lamat1111/Q1-Wallet/main/test/install.py -o install.py
 chmod +x install.py
 python3 install.py
 ```
