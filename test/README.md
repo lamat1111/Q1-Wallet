@@ -129,7 +129,7 @@ Ideas to improve this terminal-based wallet:
 - **Enhanced Terminal**: Uses colorama (implemented); could add prompt_toolkit for autocomplete.  
 - **Bundled Emulator**: Include a lightweight terminal (e.g., Mintty).  
 - **Minimal TUI**: Use npyscreen for arrow-key navigation.  
-See this discussion for details.
+See this [ChatGPT discussion](https://chatgpt.com/share/6761ae54-d1cc-8007-b3f8-3cfcf66b8551) for more details.
 
 ## License
 GNU Affero General Public License
