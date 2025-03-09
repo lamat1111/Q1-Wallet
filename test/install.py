@@ -13,7 +13,7 @@ def check_python_and_pip():
     try:
         subprocess.run([sys.executable, "--version"], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     except FileNotFoundError:
-        print("\033[1;31m❌ Python 3 is not installed or not in PATH.\033[0m")
+        print(error_message("Python 3 is not installed or not in PATH"))
         if platform.system().lower() == "linux":
             print("Install it with: sudo apt install python3")
         elif platform.system().lower() == "darwin":
@@ -25,7 +25,7 @@ def check_python_and_pip():
     try:
         subprocess.run([sys.executable, "-m", "pip", "--version"], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     except subprocess.CalledProcessError:
-        print("\033[1;31m❌ pip is not installed.\033[0m")
+        print(error_message("pip is not installed"))
         if platform.system().lower() == "linux":
             print("Install it with: sudo apt install python3-pip")
         elif platform.system().lower() == "darwin":
@@ -60,7 +60,7 @@ def ensure_dependencies():
             subprocess.run(pip_cmd + [package], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             print(f"✅ Successfully installed {package}")
         except subprocess.CalledProcessError as e:
-            print(f"\033[1;31m❌ Failed to install {package}: {e}\033[0m")
+            print(error_message(f"Failed to install {package}: {e}"))
             return False
     
     return True
@@ -77,9 +77,9 @@ colorama.init()
 
 # Constants
 SCRIPT_VERSION = "1.1.4"
-INSTALL_DIR = Path.home() / "q1wallet"
+INSTALL_DIR = Path.home() / "q1wallet"  # Change this to Path.home() / "q1wallet_python" for your test
 SYMLINK_PATH = Path("/usr/local/bin/q1wallet") if os.name != "nt" else (INSTALL_DIR / "q1wallet.bat")
-MENU_URL = "https://raw.githubusercontent.com/lamat1111/Q1-Wallet/main/menu.py"
+MENU_URL = "https://raw.githubusercontent.com/lamat1111/Q1-Wallet/main/test/menu.py"
 QCLIENT_RELEASE_URL = "https://releases.quilibrium.com/qclient-release"
 QUILIBRIUM_RELEASES = "https://releases.quilibrium.com"
 
@@ -92,20 +92,19 @@ NC = Style.RESET_ALL
 
 # Helper Functions
 def error_message(msg):
-    print(f"{RED}❌ {msg}{NC}")
+    return f"{RED}❌ {msg}{NC}"
 
 def warning_message(msg):
-    print(f"{ORANGE}⚠️ {msg}{NC}")
+    return f"{ORANGE}⚠️ {msg}{NC}"
 
 def success_message(msg):
-    print(f"{GREEN}✅ {msg}{NC}")
+    return f"{GREEN}✅ {msg}{NC}"
 
 def clear_screen():
     os.system('cls' if os.name == 'nt' else 'clear')
 
 def check_sudo():
     if os.name == "nt":
-        # Check if running as admin on Windows
         try:
             import ctypes
             return ctypes.windll.shell32.IsUserAnAdmin() != 0
@@ -120,7 +119,7 @@ def check_sudo():
             subprocess.run(["sudo", "true"], check=True)
             return True
         except subprocess.CalledProcessError:
-            error_message("Failed to obtain sudo privileges. Command creation aborted.")
+            print(error_message("Failed to obtain sudo privileges. Command creation aborted."))
             return False
 
 def check_system_compatibility():
@@ -128,10 +127,10 @@ def check_system_compatibility():
     arch = platform.machine().lower()
     supported_os = {"linux": ["x86_64", "aarch64"], "darwin": ["x86_64", "arm64"], "windows": ["x86_64", "amd64"]}
     if system not in supported_os:
-        error_message(f"Unsupported operating system: {system}")
+        print(error_message(f"Unsupported operating system: {system}"))
         sys.exit(1)
     if arch not in supported_os[system]:
-        error_message(f"Unsupported architecture: {arch} on {system}")
+        print(error_message(f"Unsupported architecture: {arch} on {system}"))
         sys.exit(1)
     return system, arch
 
@@ -162,8 +161,7 @@ def check_existing_installation():
             elif choice == "3":
                 confirm_full_reinstall()
                 return True
-            error_message("Invalid choice. Please enter 1, 2, or 3")
-    return False
+            print(error_message("Invalid choice. Please enter 1, 2, or 3"))
 
 def reinstall_software_only():
     print("\nReinstalling Q1 Wallet software...")
@@ -180,7 +178,7 @@ def reinstall_software_only():
             else:
                 item.unlink()
     
-   號如果 (INSTALL_DIR / ".current_wallet.bak").exists():
+    if (INSTALL_DIR / ".current_wallet.bak").exists():
         shutil.move(INSTALL_DIR / ".current_wallet.bak", current_wallet)
 
 def confirm_full_reinstall():
@@ -198,15 +196,15 @@ def check_wallet_exists(wallet_name):
 def handle_wallet_creation(wallet_name):
     if wallet_name:
         if check_wallet_exists(wallet_name):
-            warning_message(f"Wallet '{wallet_name}' already exists")
+            print(warning_message(f"Wallet '{wallet_name}' already exists"))
             if input("Would you like to create a different wallet? (y/n): ").lower() == "y":
                 while True:
                     wallet_name = input("Enter new wallet name (a-z, 0-9, -, _): ")
                     if not re.match(r"^[a-z0-9_-]+$", wallet_name):
-                        error_message("Invalid wallet name. Use only lowercase letters, numbers, dashes, underscores")
+                        print(error_message("Invalid wallet name. Use only lowercase letters, numbers, dashes, underscores"))
                         continue
                     if check_wallet_exists(wallet_name):
-                        error_message(f"Wallet '{wallet_name}' already exists")
+                        print(error_message(f"Wallet '{wallet_name}' already exists"))
                         continue
                     break
             else:
@@ -214,7 +212,7 @@ def handle_wallet_creation(wallet_name):
         (INSTALL_DIR / "wallets" / wallet_name / ".config").mkdir(parents=True)
         with open(INSTALL_DIR / ".current_wallet", "w") as f:
             f.write(wallet_name)
-        success_message(f"Wallet '{wallet_name}' created successfully")
+        print(success_message(f"Wallet '{wallet_name}' created successfully"))
         return wallet_name
     return ""
 
@@ -232,18 +230,18 @@ def setup_symlink(system):
         
         if input("Add to PATH for 'q1wallet' command? (requires admin, y/n): ").lower() == "y":
             if not check_sudo():
-                error_message("Admin access required to modify PATH.")
+                print(error_message("Admin access required to modify PATH"))
                 print(f"Run manually with: {SYMLINK_PATH}")
                 return
             try:
                 current_path = os.environ["PATH"]
                 if str(INSTALL_DIR) not in current_path:
                     subprocess.run(f'setx PATH "%PATH%;{INSTALL_DIR}"', shell=True, check=True)
-                    success_message("Added to PATH. Restart your terminal to use 'q1wallet'.")
+                    print(success_message("Added to PATH. Restart your terminal to use 'q1wallet'"))
                 else:
-                    success_message("Already in PATH.")
+                    print(success_message("Already in PATH"))
             except subprocess.CalledProcessError:
-                error_message("Failed to update PATH.")
+                print(error_message("Failed to update PATH"))
                 print(f"Run manually with: {SYMLINK_PATH}")
         else:
             print(f"Run manually with: {SYMLINK_PATH}")
@@ -254,7 +252,7 @@ def setup_symlink(system):
             return
         
         if SYMLINK_PATH.exists() and SYMLINK_PATH.resolve() == (INSTALL_DIR / "menu.py"):
-            success_message("Command 'q1wallet' is already set up correctly")
+            print(success_message("Command 'q1wallet' is already set up correctly"))
             return
         
         if not check_sudo():
@@ -263,18 +261,18 @@ def setup_symlink(system):
         
         SYMLINK_PATH.parent.mkdir(parents=True, exist_ok=True)
         if SYMLINK_PATH.exists() and not SYMLINK_PATH.is_symlink():
-            error_message(f"A file exists at {SYMLINK_PATH} but is not a symlink. Remove it manually.")
+            print(error_message(f"A file exists at {SYMLINK_PATH} but is not a symlink. Remove it manually"))
             return
         
         try:
             subprocess.run(["sudo", "ln", "-sf", str(INSTALL_DIR / "menu.py"), str(SYMLINK_PATH)], check=True)
             if SYMLINK_PATH.exists():
-                success_message("Command 'q1wallet' installed successfully!")
+                print(success_message("Command 'q1wallet' installed successfully!"))
                 print("You can now run 'q1wallet' from anywhere")
             else:
-                error_message("Symlink creation failed")
+                print(error_message("Symlink creation failed"))
         except subprocess.CalledProcessError:
-            error_message("Failed to create quick command 'q1wallet'")
+            print(error_message("Failed to create quick command 'q1wallet'"))
             print(f"To create it later, run: sudo ln -sf {INSTALL_DIR / 'menu.py'} {SYMLINK_PATH}")
 
 # Main Installer Logic
@@ -302,10 +300,10 @@ if input().lower() == "y":
     while True:
         wallet_name = input("Enter wallet name (a-z, 0-9, -, _): ")
         if not re.match(r"^[a-z0-9_-]+$", wallet_name):
-            error_message("Invalid wallet name. Use only lowercase letters, numbers, dashes, underscores")
+            print(error_message("Invalid wallet name. Use only lowercase letters, numbers, dashes, underscores"))
             continue
         if check_wallet_exists(wallet_name):
-            error_message(f"Wallet '{wallet_name}' already exists")
+            print(error_message(f"Wallet '{wallet_name}' already exists"))
             continue
         break
 
@@ -330,7 +328,7 @@ files = requests.get(QCLIENT_RELEASE_URL).text.splitlines()
 version_pattern = rf"qclient-(\d+\.\d+\.\d+\.\d*)-{release_os}-{release_arch}{suffix}"
 versions = [re.search(version_pattern, f).group(1) for f in files if re.search(version_pattern, f)]
 if not versions:
-    error_message(f"No qclient files found for {release_os}-{release_arch}")
+    print(error_message(f"No qclient files found for {release_os}-{release_arch}"))
     sys.exit(1)
 latest_version = max(versions, key=lambda x: [int(p) for p in x.split('.')])
 matched_files = [f for f in files if f"qclient-{latest_version}-{release_os}-{release_arch}" in f]
