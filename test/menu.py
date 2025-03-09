@@ -181,18 +181,26 @@ def get_platform_info():
         return None, None, None
     return mapped_os, mapped_arch, suffix
 
+
 def find_qclient_binary():
     global QCLIENT_EXEC
     os_name, arch, suffix = get_platform_info()
     if not os_name:
         return None
-    pattern = f"qclient-*[0-9]{os_name}-{arch}{suffix}"
-    binaries = sorted([f for f in QCLIENT_DIR.glob(pattern) if not f.name.endswith((".dgst", ".sig", "Zone.Identifier"))],
-                     key=lambda x: re.search(r'qclient-(\d+\.\d+\.\d+\.\d*)', x.name).group(1) if re.search(r'qclient-(\d+\.\d+\.\d+\.\d*)', x.name) else "0.0.0.0")
+    pattern = f"qclient-*-{os_name}-{arch}{suffix}"
+    binaries = sorted(
+        [f for f in QCLIENT_DIR.glob(pattern) if not f.name.endswith((".dgst", ".sig", "Zone.Identifier"))],
+        key=lambda x: re.search(r'qclient-(\d+\.\d+\.\d+\.\d*)', x.name).group(1) if re.search(r'qclient-(\d+\.\d+\.\d+\.\d*)', x.name) else "0.0.0.0"
+    )
+    # Comment out debug messages
+    # print(f"DEBUG: Searching for binaries with pattern '{pattern}' in {QCLIENT_DIR}")
+    # print(f"DEBUG: Found binaries: {[f.name for f in binaries]}")
     if binaries:
         QCLIENT_EXEC = binaries[-1]
         QCLIENT_EXEC.chmod(QCLIENT_EXEC.stat().st_mode | 0o111)
+        # print(f"DEBUG: Selected binary: {QCLIENT_EXEC.name}")
         return QCLIENT_EXEC
+    # print("DEBUG: No matching binaries found")
     return None
 
 def version_gt(v1, v2):
@@ -241,6 +249,7 @@ def check_qclient_version():
         return False
 
 def download_latest_qclient():
+    global QCLIENT_EXEC
     print("\nProceed to download the latest Qclient version? (y/n)")
     if input().lower() != 'y':
         error_message("Download cancelled.")
@@ -266,7 +275,6 @@ def download_latest_qclient():
                     f.write(response.content)
                 if not file.endswith((".dgst", ".sig")):
                     (QCLIENT_DIR / file).chmod(0o755)
-        global QCLIENT_EXEC
         QCLIENT_EXEC = find_qclient_binary()
         if QCLIENT_EXEC:
             print(f"✅ Successfully downloaded Qclient v{latest_version} to {QCLIENT_DIR}")
@@ -890,6 +898,7 @@ Use this script at your own risk and always verify transactions before confirmin
 """)
     press_any_key()
 
+
 def check_for_updates():
     try:
         latest_version = re.search(r'SCRIPT_VERSION="([^"]+)"', 
@@ -907,7 +916,7 @@ def check_for_updates():
             print("\n✅ Running latest version")
     except Exception as e:
         error_message(f"Update check failed: {e}")
-    press_any_key()
+    # Removed press_any_key() to auto-proceed to menu
 
 # Main Menu Loop
 def main():
@@ -956,5 +965,5 @@ if __name__ == "__main__":
     if not check_qclient_binary():
         sys.exit(1)
     setup_initial_wallet()
-    check_for_updates()
+    check_for_updates()  # Runs silently unless update needed, then flows to main()
     main()
