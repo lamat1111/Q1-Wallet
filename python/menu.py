@@ -12,7 +12,7 @@ from pathlib import Path
 import threading
 
 # Constants
-SCRIPT_VERSION = "1.2.2"
+SCRIPT_VERSION = "1.2.3"
 QCLIENT_DIR = Path(__file__).parent.resolve()
 VENV_DIR = QCLIENT_DIR / "venv"  # Match virtual environment from install.py
 WALLETS_DIR = QCLIENT_DIR / "wallets"
