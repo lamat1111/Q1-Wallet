@@ -10,106 +10,52 @@ import shutil
 import zipfile
 from pathlib import Path
 import threading
+import signal
 
-# Constants
-SCRIPT_VERSION = "1.2.3"
-QCLIENT_DIR = Path(__file__).parent.resolve()
-VENV_DIR = QCLIENT_DIR / "venv"  # Match virtual environment from install.py
-WALLETS_DIR = QCLIENT_DIR / "wallets"
-CURRENT_WALLET_FILE = QCLIENT_DIR / ".current_wallet"
-QCLIENT_RELEASE_URL = "https://releases.quilibrium.com/qclient-release"
-QUILIBRIUM_RELEASES = "https://releases.quilibrium.com"
-
-# Color definitions (using colorama after initialization)
-RED = ""
-ORANGE = ""
-PURPLE = ""
-BOLD = ""
-NC = ""
-
-# Global variables
-WALLET_NAME = None
-FLAGS = None
-QCLIENT_EXEC = None
-
-# Function to initialize colorama after dependencies are ensured
-def init_colors():
-    global RED, ORANGE, PURPLE, BOLD, NC
-    from colorama import Fore, Style
-    colorama.init()
-    RED = Fore.RED + Style.BRIGHT
-    ORANGE = Fore.YELLOW
-    PURPLE = Fore.MAGENTA
-    BOLD = Style.BRIGHT
-    NC = Style.RESET_ALL
-
+# Function to check and install dependencies
 def ensure_dependencies():
     required_modules = [("requests", "requests"), ("colorama", "colorama")]
     missing_modules = []
     
-    # Determine the Python interpreter to use (prefer virtual environment)
-    venv_python = VENV_DIR / ("Scripts" if platform.system().lower() == "windows" else "bin") / "python"
-    if not VENV_DIR.exists() or not venv_python.exists():
-        print(f"{RED}❌ Virtual environment not found at {VENV_DIR}. Please run install.py first.{NC}")
-        print("Alternative solution: Use a manual virtual environment:")
-        print(f"1. Create it: '{sys.executable} -m venv {VENV_DIR}'")
-        print(f"2. Activate it: 'source {VENV_DIR}/bin/activate' (Linux/macOS) or '{VENV_DIR}\\Scripts\\activate' (Windows)")
-        print(f"3. Run this script again: '{venv_python} {__file__}'")
-        return False
-    
-    # Check if pip is available in the virtual environment
-    try:
-        # Corrected command to check pip version
-        result = subprocess.run(
-            [str(venv_python), "-m", "pip", "--version"],
-            check=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True
-        )
-        print(f"pip version: {result.stdout.strip()}")
-    except subprocess.CalledProcessError as e:
-        print(f"{RED}❌ Error: 'pip' is not available in the virtual environment.{NC}")
-        print(f"Error details: {e.stderr}")
-        print(f"Please ensure {VENV_DIR} is properly set up by running install.py.")
-        return False
-    
-    # Check for missing modules
     for module_name, package_name in required_modules:
         try:
-            subprocess.run([str(venv_python), "-c", f"import {module_name}"], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        except subprocess.CalledProcessError:
+            __import__(module_name)
+        except ImportError:
             missing_modules.append(package_name)
     
     if not missing_modules:
         return True
     
-    print(f"{ORANGE}Missing required modules: {', '.join(missing_modules)}{NC}")
-    print("Attempting to install them in the virtual environment...")
+    print(f"Missing required modules: {', '.join(missing_modules)}")
+    print("Attempting to install them automatically...")
+    pip_cmd = [sys.executable, "-m", "pip", "install"]
     
-    # Use virtual environment's pip for installation
-    pip_cmd = [str(venv_python), "-m", "pip", "install"]
+    try:
+        subprocess.run([sys.executable, "-m", "pip", "--version"], 
+                      check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    except subprocess.CalledProcessError:
+        print(f"\033[1;31m❌ Error: 'pip' is not available. Please install it manually.\033[0m")
+        print("Linux/macOS: 'sudo apt install python3-pip' or 'brew install python'")
+        print("Windows: Ensure pip is installed with Python")
+        return False
     
     for package in missing_modules:
         print(f"Installing {package}...")
         try:
             subprocess.run(pip_cmd + [package], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            print(f"{BOLD}✅ Successfully installed {package}{NC}")
+            print(f"✅ Successfully installed {package}")
         except subprocess.CalledProcessError as e:
-            print(f"{RED}❌ Failed to install {package}: {e}{NC}")
-            print("Try manually within the virtual environment:")
-            print(f"{venv_python} -m pip install {package}")
+            print(f"\033[1;31m❌ Failed to install {package}: {e}\033[0m")
             return False
     
-    # Verify imports work after installation
     for module_name, package_name in required_modules:
         try:
-            subprocess.run([str(venv_python), "-c", f"import {module_name}"], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        except subprocess.CalledProcessError:
-            print(f"{RED}❌ {package_name} installed but not importable.{NC}")
+            __import__(module_name)
+        except ImportError:
+            print(f"\033[1;31m❌ {package_name} installed but not importable.\033[0m")
             return False
     
-    print(f"{BOLD}✅ All dependencies are now installed.{NC}")
+    print("✅ All dependencies are now installed.")
     return True
 
 # Run dependency check before any imports that require external modules
@@ -119,7 +65,31 @@ if not ensure_dependencies():
 # Now safe to import requests and colorama
 import requests
 import colorama
-init_colors()
+from colorama import Fore, Style
+
+# Initialize colorama
+colorama.init()
+
+# Rest of the script continues here...
+# Constants
+SCRIPT_VERSION = "1.2.2"
+QCLIENT_DIR = Path(__file__).parent.resolve()
+WALLETS_DIR = QCLIENT_DIR / "wallets"
+CURRENT_WALLET_FILE = QCLIENT_DIR / ".current_wallet"
+QCLIENT_RELEASE_URL = "https://releases.quilibrium.com/qclient-release"
+QUILIBRIUM_RELEASES = "https://releases.quilibrium.com"
+
+# Color definitions
+RED = Fore.RED + Style.BRIGHT
+ORANGE = Fore.YELLOW
+PURPLE = Fore.MAGENTA
+BOLD = Style.BRIGHT
+NC = Style.RESET_ALL
+
+# Global variables
+WALLET_NAME = None
+FLAGS = None
+QCLIENT_EXEC = None
 
 # Helper Functions
 def clear_screen():
@@ -163,11 +133,19 @@ def wait_with_spinner(message, seconds):
             time.sleep(0.1)
         print("\r" + " " * (len(message.format(seconds)) + 2), end="\r", flush=True)
     
+    def handler(signum, frame):
+        stop_event.set()
+        print("\n\nOperation cancelled. Returning to main menu...")
+        main()
+        sys.exit(0)
+    
+    signal.signal(signal.SIGINT, handler)
     thread = threading.Thread(target=spinner)
     thread.start()
     time.sleep(seconds)
     stop_event.set()
     thread.join()
+    signal.signal(signal.SIGINT, signal.SIG_DFL)
 
 def get_config_flags():
     global WALLET_NAME
@@ -203,6 +181,7 @@ def get_platform_info():
         return None, None, None
     return mapped_os, mapped_arch, suffix
 
+
 def find_qclient_binary():
     global QCLIENT_EXEC
     os_name, arch, suffix = get_platform_info()
@@ -213,13 +192,15 @@ def find_qclient_binary():
         [f for f in QCLIENT_DIR.glob(pattern) if not f.name.endswith((".dgst", ".sig", "Zone.Identifier"))],
         key=lambda x: re.search(r'qclient-(\d+\.\d+\.\d+\.\d*)', x.name).group(1) if re.search(r'qclient-(\d+\.\d+\.\d+\.\d*)', x.name) else "0.0.0.0"
     )
+    # Comment out debug messages
+    # print(f"DEBUG: Searching for binaries with pattern '{pattern}' in {QCLIENT_DIR}")
+    # print(f"DEBUG: Found binaries: {[f.name for f in binaries]}")
     if binaries:
         QCLIENT_EXEC = binaries[-1]
-        try:
-            QCLIENT_EXEC.chmod(QCLIENT_EXEC.stat().st_mode | 0o111)
-        except PermissionError:
-            warning_message(f"Permission denied setting executable bit on {QCLIENT_EXEC}. Try running with sudo or adjust permissions manually.")
+        QCLIENT_EXEC.chmod(QCLIENT_EXEC.stat().st_mode | 0o111)
+        # print(f"DEBUG: Selected binary: {QCLIENT_EXEC.name}")
         return QCLIENT_EXEC
+    # print("DEBUG: No matching binaries found")
     return None
 
 def version_gt(v1, v2):
@@ -287,14 +268,13 @@ def download_latest_qclient():
         latest_version = max(versions, key=lambda x: [int(p) for p in x.split('.')])
         matched_files = [f for f in files if f"qclient-{latest_version}-{os_name}-{arch}" in f]
         for file in matched_files:
-            file_path = QCLIENT_DIR / file
-            if not file_path.exists():
+            if not (QCLIENT_DIR / file).exists():
                 print(f"Downloading {file}...")
                 response = requests.get(f"{QUILIBRIUM_RELEASES}/{file}", timeout=300)
-                with open(file_path, 'wb') as f:
+                with open(QCLIENT_DIR / file, 'wb') as f:
                     f.write(response.content)
                 if not file.endswith((".dgst", ".sig")):
-                    file_path.chmod(0o755)
+                    (QCLIENT_DIR / file).chmod(0o755)
         QCLIENT_EXEC = find_qclient_binary()
         if QCLIENT_EXEC:
             print(f"✅ Successfully downloaded Qclient v{latest_version} to {QCLIENT_DIR}")
@@ -341,42 +321,12 @@ def check_wallet_encryption():
             else:
                 error_message("Decryption failed")
                 return False
-        except Exception as e:
-            error_message(f"Decryption failed - incorrect password or corrupted archive: {e}")
+        except Exception:
+            error_message("Incorrect password or corrupted archive")
             return False
     return True
 
-def encrypt_wallets():
-    if WALLETS_DIR.exists() and not (QCLIENT_DIR / "wallets.zip").exists():
-        print(format_title("Wallet Encryption"))
-        print("This will encrypt your wallet files to secure them with a password.")
-        warning_message("IMPORTANT: If you lose the password, your wallets cannot be recovered!")
-        warning_message("Make sure to use a strong password and store it securely.")
-        if not confirm_proceed("Encrypt Wallets"):
-            return
-        os.chdir(QCLIENT_DIR)
-        password = input("Password: ")
-        try:
-            with zipfile.ZipFile("wallets.zip", 'w', zipfile.ZIP_DEFLATED) as zf:
-                zf.setpassword(password.encode())
-                for root, _, files in os.walk("wallets"):
-                    for file in files:
-                        zf.write(Path(root) / file, Path(root) / file)
-            shutil.rmtree(WALLETS_DIR)
-            print(f"{BOLD}✅ Wallets encrypted successfully{NC}")
-            print(f"Your wallets are now encrypted in: {QCLIENT_DIR / 'wallets.zip'}")
-            print("Keep this file and your password safe!")
-        except Exception as e:
-            error_message(f"Encryption failed: {e}")
-            print("Ensure you have write permissions in {QCLIENT_DIR}")
-    else:
-        if (QCLIENT_DIR / "wallets.zip").exists() and WALLETS_DIR.exists():
-            error_message("Invalid state: Both encrypted and unencrypted wallets found.")
-            print("Remove either wallets.zip or the wallets directory manually.")
-        else:
-            error_message("No wallets found to encrypt.")
-
-# Menu Interface and Functions (unchanged structure, adjusted for consistency)
+# Menu Interface
 def display_menu():
     global WALLET_NAME
     clear_screen()
@@ -410,6 +360,7 @@ E) Exit                      v {SCRIPT_VERSION}
 """)
     print(f"{ORANGE}The Q1 WALLET is still in beta. Use at your own risk.{NC}\n")
 
+# Menu Functions
 def press_any_key():
     input("\nPress Enter to continue...")
     display_menu()
@@ -704,8 +655,7 @@ def create_new_wallet():
         with open(CURRENT_WALLET_FILE, 'w') as f:
             f.write(WALLET_NAME)
         FLAGS = get_config_flags()
-        print(f"\n{BOLD}✅ Created new wallet: {new_wallet}{NC}")
-        print(f"{BOLD}✅ Switched to new wallet{NC}")
+        print(f"\n✅ Created new wallet: {new_wallet}\n✅ Switched to new wallet")
         check_balance()
         print("Your new wallet is ready to use!")
         main()
@@ -742,7 +692,7 @@ def switch_wallet():
         with open(CURRENT_WALLET_FILE, 'w') as f:
             f.write(WALLET_NAME)
         FLAGS = get_config_flags()
-        print(f"\n{BOLD}✅ Switched to wallet: {new_wallet}{NC}")
+        print(f"\n✅ Switched to wallet: {new_wallet}")
         main()
         return
 
@@ -786,28 +736,72 @@ def delete_wallet():
             error_message("Wallet name confirmation did not match. Deletion cancelled")
             continue
         shutil.rmtree(WALLETS_DIR / selected_wallet)
-        print(f"\n{BOLD}✅ Wallet '{selected_wallet}' has been deleted.{NC}")
+        print(f"\n✅ Wallet '{selected_wallet}' has been deleted.")
         main()
         return
 
 def encrypt_decrypt_wallets():
     if (QCLIENT_DIR / "wallets.zip").exists() and not WALLETS_DIR.exists():
-        print(format_title("Wallet Decryption"))
-        print("This will decrypt your wallet files using your password.")
-        print("Current status: Wallets are encrypted")
-        if not confirm_proceed("Decrypt Wallets"):
+        print(format_title("Wallet Encryption"))
+        print("This will decrypt your wallet files using your password.\nCurrent status: Wallets are encrypted")
+        while True:
+            choice = input("\nDecrypt your wallets? (y/n or 'e' to exit): ").lower()
+            if choice == 'e':
+                print("Operation cancelled.")
+                main()
+                return
+            if choice not in ('y', 'n'):
+                error_message("Please answer y or n")
+                continue
+            if choice == 'n':
+                print("Operation cancelled.")
+                main()
+                return
+            password = input("Password: ")
+            try:
+                with zipfile.ZipFile(QCLIENT_DIR / "wallets.zip", 'r') as zf:
+                    zf.extractall(QCLIENT_DIR, pwd=password.encode())
+                (QCLIENT_DIR / "wallets.zip").unlink()
+                print("✅ Wallets decrypted successfully")
+                main()
+                return
+            except Exception:
+                error_message("Decryption failed - incorrect password or corrupted archive")
+    elif WALLETS_DIR.exists() and not (QCLIENT_DIR / "wallets.zip").exists():
+        print(format_title("Wallet Encryption"))
+        print("This will encrypt your wallet files to secure them with a password.\nCurrent status: Wallets are unprotected")
+        warning_message("IMPORTANT: If you lose the password, your wallets cannot be recovered!")
+        warning_message("Make sure to use a strong password and store it securely.")
+        while True:
+            choice = input("\nEncrypt your wallets? (y/n or 'e' to exit): ").lower()
+            if choice == 'e':
+                print("Operation cancelled.")
+                main()
+                return
+            if choice not in ('y', 'n'):
+                error_message("Please answer y or n")
+                continue
+            if choice == 'n':
+                print("Operation cancelled.")
+                main()
+                return
+            os.chdir(QCLIENT_DIR)
+            password = input("Password: ")
+            with zipfile.ZipFile("wallets.zip", 'w', zipfile.ZIP_DEFLATED) as zf:
+                zf.setpassword(password.encode())
+                for root, _, files in os.walk("wallets"):
+                    for file in files:
+                        zf.write(Path(root) / file, Path(root) / file)
+            shutil.rmtree(WALLETS_DIR)
+            print(f"✅ Wallets encrypted successfully\nYour wallets are now encrypted in: {QCLIENT_DIR / 'wallets.zip'}")
+            print("Keep this file and your password safe!")
+            main()
             return
-        password = input("Password: ")
-        try:
-            with zipfile.ZipFile(QCLIENT_DIR / "wallets.zip", 'r') as zf:
-                zf.extractall(QCLIENT_DIR, pwd=password.encode())
-            (QCLIENT_DIR / "wallets.zip").unlink()
-            print(f"{BOLD}✅ Wallets decrypted successfully{NC}")
-        except Exception as e:
-            error_message(f"Decryption failed - incorrect password or corrupted archive: {e}")
-            print("Ensure you have write permissions in {QCLIENT_DIR}")
     else:
-        encrypt_wallets()
+        if (QCLIENT_DIR / "wallets.zip").exists() and WALLETS_DIR.exists():
+            show_error_and_confirm("Invalid state: Both encrypted and unencrypted wallets found.\nRemove either wallets.zip or the wallets directory")
+        else:
+            show_error_and_confirm("No wallets found to encrypt/decrypt")
 
 def help_menu():
     print(format_title("WALLET COMMANDS HELP"))
@@ -854,10 +848,10 @@ Note: Always ensure you have backups of your wallet configurations
     press_any_key()
 
 def import_wallet():
-    print(format_title("Import Wallet"))
+    print(format_title("Import wallet"))
     print(f"""
-To import a new wallet, create a folder in {WALLETS_DIR} (the folder name will be your wallet name),
-then create a .config folder inside it, and paste your current wallet config.yml file there.
+To import a new wallet create a folder in {WALLETS_DIR} (the folder name will be your wallet name),
+then create a .config folder inside it, and paste there your current wallet config.yml file
 """)
     press_any_key()
 
@@ -904,24 +898,25 @@ Use this script at your own risk and always verify transactions before confirmin
 """)
     press_any_key()
 
+
 def check_for_updates():
     try:
-        response = requests.get("https://raw.githubusercontent.com/lamat1111/Q1-Wallet/main/menu.py", timeout=10)
-        latest_version = re.search(r'SCRIPT_VERSION = "([^"]+)"', response.text).group(1)
+        latest_version = re.search(r'SCRIPT_VERSION="([^"]+)"', 
+                                 requests.get("https://raw.githubusercontent.com/lamat1111/Q1-Wallet/main/menu.sh").text).group(1)
         print(f"\nCurrent local version: {SCRIPT_VERSION}\nLatest remote version: {latest_version}")
         if version_gt(latest_version, SCRIPT_VERSION):
             warning_message("A new version is available!")
-            if confirm_proceed("Update Now"):
-                temp_file = QCLIENT_DIR / "menu.py.new"
-                with open(temp_file, 'wb') as f:
-                    f.write(response.content)
-                os.replace(temp_file, __file__)  # Atomic replace
+            if input("\nUpdate now? (y/n): ").lower() == 'y':
+                response = requests.get("https://raw.githubusercontent.com/lamat1111/Q1-Wallet/main/menu.sh")
+                with open(__file__, 'w') as f:
+                    f.write(response.text)
                 print("✅ Updated. Restarting...")
                 os.execv(sys.executable, [sys.executable] + sys.argv)
         else:
             print("\n✅ Running latest version")
     except Exception as e:
         error_message(f"Update check failed: {e}")
+    # Removed press_any_key() to auto-proceed to menu
 
 # Main Menu Loop
 def main():
