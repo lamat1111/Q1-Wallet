@@ -1,8 +1,9 @@
 # Q1 CLI Wallet (Python Edition)
 
+THIS EDITION OF THE Q1 WALLET IS NOT MAINTAINED - USE ONLY FOR TESTING PURPOSES
+
 Q1 Wallet (Python Edition) is a user-friendly, cross-platform command-line interface for managing QUIL tokens using Quilibrium's `qclient`. It replaces the original Bash script with a Python implementation, offering the same functionality with improved compatibility across Linux, macOS, and Windows.
-Tested on Windows WSL
-To be tested on MAC OS
+Tested on Windows WSL adn macOS
 
 This is unofficial community software provided as-is. Always verify transactions carefully and keep your wallet information secure. The current version is still in BETA—use it cautiously and report any issues.
 
@@ -50,14 +51,15 @@ python3 install.py
 ```
 
 ### macOS
-Ensure Python 3 is installed:
+Ensure Python 3 and the required modeules are installed:
 ```bash
 brew install python3
+python3 -m venv venv && source venv/bin/activate && pip install requests colorama
 ```
 Install:
 ```bash
 cd && mkdir -p q1wallet && cd q1wallet
-curl -sSL https://raw.githubusercontent.com/lamat1111/Q1-Wallet/main/test/install.py -o install.py
+curl -sSL https://raw.githubusercontent.com/lamat1111/Q1-Wallet/main/test/python/install.py -o install.py
 chmod +x install.py
 python3 install.py
 ```
@@ -69,7 +71,7 @@ Install Python 3 from python.org (check "Add Python to PATH").
 Open Command Prompt or PowerShell:
 ```bash
 cd %USERPROFILE% && mkdir q1wallet && cd q1wallet
-curl -O https://raw.githubusercontent.com/lamat1111/Q1-Wallet/main/test/install.py
+curl -O https://raw.githubusercontent.com/lamat1111/Q1-Wallet/main/test/python/install.py
 python install.py
 ```
 
@@ -87,7 +89,7 @@ sudo apt update && sudo apt upgrade -y
 Install:
 ```bash
 cd && mkdir -p q1wallet && cd q1wallet
-curl -sSL https://raw.githubusercontent.com/lamat1111/Q1-Wallet/main/test/install.py -o install.py
+curl -sSL https://raw.githubusercontent.com/lamat1111/Q1-Wallet/main/test/python/install.py -o install.py
 chmod +x install.py
 python3 install.py
 ```
