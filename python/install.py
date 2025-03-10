@@ -9,39 +9,29 @@ import shutil
 import tempfile
 from pathlib import Path
 
-# Constants
-SCRIPT_VERSION = "1.1.5"
+# Constants (unchanged)
+SCRIPT_VERSION = "1.1.6"
 INSTALL_DIR = Path.home() / "q1wallet"
 SYMLINK_NAME = "q1wallet"
 SYMLINK_PATH = Path(f"/usr/local/bin/{SYMLINK_NAME}") if os.name != "nt" else (INSTALL_DIR / f"{SYMLINK_NAME}.bat")
-MENU_URL = "https://raw.githubusercontent.com/lamat1111/Q1-Wallet/main/python/menu.py"
+MENU_URL = "https://raw.githubusercontent.com/lamat1111/Q1-Wallet/main/python/test/menu.py"
 QCLIENT_RELEASE_URL = "https://releases.quilibrium.com/qclient-release"
 QUILIBRIUM_RELEASES = "https://releases.quilibrium.com"
 
-# Import colorama and define colors early
-import colorama
-from colorama import Fore, Style
-colorama.init()
-RED = Fore.RED + Style.BRIGHT
-ORANGE = Fore.YELLOW
-GREEN = Fore.GREEN
-BOLD = Style.BRIGHT
-NC = Style.RESET_ALL
-
-# Helper functions
+# Helper functions (unchanged)
 def error_message(msg):
-    return f"{RED}❌ {msg}{NC}"
+    return f"{Fore.RED}❌ {msg}{Style.RESET_ALL}"
 
 def warning_message(msg):
-    return f"{ORANGE}⚠️ {msg}{NC}"
+    return f"{Fore.YELLOW}⚠️ {msg}{Style.RESET_ALL}"
 
 def success_message(msg):
-    return f"{GREEN}✅ {msg}{NC}"
+    return f"{Fore.GREEN}✅ {msg}{Style.RESET_ALL}"
 
 def clear_screen():
     os.system('cls' if os.name == 'nt' else 'clear')
 
-# Initial dependency check for Python and pip
+# Initial dependency check for Python and pip (unchanged)
 def check_python_and_pip():
     try:
         subprocess.run([sys.executable, "--version"], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -67,40 +57,25 @@ def check_python_and_pip():
             print("Run: python -m ensurepip --upgrade && python -m pip install --upgrade pip")
         sys.exit(1)
 
-check_python_and_pip()
-
-# Set up virtual environment
+# Set up virtual environment (unchanged)
 VENV_DIR = Path(INSTALL_DIR) / "venv"
 def setup_virtualenv():
     print("Setting up virtual environment...")
-    
-    # Check if ensurepip is available by attempting a temporary venv creation
     temp_dir = tempfile.mkdtemp()
-    #print(f"DEBUG: Testing venv creation in {temp_dir}")
     try:
         subprocess.run([sys.executable, "-m", "venv", temp_dir], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        shutil.rmtree(temp_dir)  # Clean up temp directory
-        #print("DEBUG: Test venv creation succeeded")
+        shutil.rmtree(temp_dir)
     except subprocess.CalledProcessError as e:
-        error_output = e.stdout.decode().lower().replace('\n', ' ').strip()  # Normalize newlines to spaces
-        #print(f"DEBUG: error_output = '{error_output}'")
-        #print(f"DEBUG: error_output length = {len(error_output)}")
-        #print(f"DEBUG: error_output raw = {repr(error_output)}")
-        #print(f"DEBUG: 'ensurepip is not available' in error_output? {'ensurepip is not available' in error_output}")
-        
+        error_output = e.stdout.decode().lower().replace('\n', ' ').strip()
         if "ensurepip is not available" in error_output:
             print(warning_message("ensurepip is not available, required for virtual environment setup"))
-            is_debian = platform.system().lower() == "linux" and os.path.exists("/etc/debian_version")
-            #print(f"DEBUG: Is Debian-based? {is_debian}")
-            if is_debian:
+            if platform.system().lower() == "linux" and os.path.exists("/etc/debian_version"):
                 print("Attempting to install python3-venv automatically...")
                 try:
-                    #print("DEBUG: Running 'sudo apt update' (this may take a moment)...")
-                    subprocess.run(["sudo", "apt", "update"], check=True)  # No stdout/stderr redirection
-                    python_version = platform.python_version_tuple()  # e.g., ('3', '10', '0')
+                    subprocess.run(["sudo", "apt", "update"], check=True)
+                    python_version = platform.python_version_tuple()
                     venv_package = f"python{python_version[0]}.{python_version[1]}-venv"
-                    #print(f"DEBUG: Running 'sudo apt install -y {venv_package}' (this may take a moment)...")
-                    subprocess.run(["sudo", "apt", "install", "-y", venv_package], check=True)  # No stdout/stderr redirection
+                    subprocess.run(["sudo", "apt", "install", "-y", venv_package], check=True)
                     print(success_message(f"{venv_package} installed successfully"))
                 except subprocess.CalledProcessError as install_error:
                     print(error_message(f"Failed to install {venv_package}: {install_error}"))
@@ -118,10 +93,8 @@ def setup_virtualenv():
             print(f"Command error: {e.stderr.decode()}")
             sys.exit(1)
 
-    # Now create the actual virtual environment
-    #print("DEBUG: Creating actual virtual environment")
     try:
-        result = subprocess.run([sys.executable, "-m", "venv", "--clear", str(VENV_DIR)], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        subprocess.run([sys.executable, "-m", "venv", "--clear", str(VENV_DIR)], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         print(success_message("Virtual environment created successfully"))
     except subprocess.CalledProcessError as e:
         print(f"Command output: {e.stdout.decode()}")
@@ -129,14 +102,14 @@ def setup_virtualenv():
         print(error_message(f"Failed to create virtual environment: {e}"))
         sys.exit(1)
 
-# Get the Python executable from the virtual environment
+# Get the Python executable from the virtual environment (unchanged)
 def get_venv_python():
     if platform.system().lower() == "windows":
         return VENV_DIR / "Scripts" / "python.exe"
     else:
         return VENV_DIR / "bin" / "python"
 
-# Now check and install Python module dependencies in the virtual environment
+# Ensure dependencies are installed
 def ensure_dependencies():
     required_modules = [("requests", "requests"), ("colorama", "colorama")]
     missing_modules = []
@@ -171,10 +144,21 @@ def ensure_dependencies():
     
     return True
 
-# Call virtual environment setup before dependency installation
+# Initialize the environment
+check_python_and_pip()
 setup_virtualenv()
 if not ensure_dependencies():
     sys.exit(1)
+
+# Now safely import colorama and define colors
+import colorama
+from colorama import Fore, Style
+colorama.init()
+RED = Fore.RED + Style.BRIGHT
+ORANGE = Fore.YELLOW
+GREEN = Fore.GREEN
+BOLD = Style.BRIGHT
+NC = Style.RESET_ALL
 
 import requests
 
