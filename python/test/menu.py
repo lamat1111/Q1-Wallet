@@ -43,7 +43,6 @@ def init_colors():
     BOLD = Style.BRIGHT
     NC = Style.RESET_ALL
 
-# Function to check and install dependencies using the virtual environment
 def ensure_dependencies():
     required_modules = [("requests", "requests"), ("colorama", "colorama")]
     missing_modules = []
@@ -58,14 +57,20 @@ def ensure_dependencies():
         print(f"3. Run this script again: '{venv_python} {__file__}'")
         return False
     
-    # Use virtual environment's pip for installation
-    pip_cmd = [str(venv_python), "-m", "pip", "install"]
-    
     # Check if pip is available in the virtual environment
     try:
-        subprocess.run(pip_cmd + ["--version"], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    except subprocess.CalledProcessError:
+        # Corrected command to check pip version
+        result = subprocess.run(
+            [str(venv_python), "-m", "pip", "--version"],
+            check=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True
+        )
+        print(f"pip version: {result.stdout.strip()}")
+    except subprocess.CalledProcessError as e:
         print(f"{RED}❌ Error: 'pip' is not available in the virtual environment.{NC}")
+        print(f"Error details: {e.stderr}")
         print(f"Please ensure {VENV_DIR} is properly set up by running install.py.")
         return False
     
@@ -81,6 +86,9 @@ def ensure_dependencies():
     
     print(f"{ORANGE}Missing required modules: {', '.join(missing_modules)}{NC}")
     print("Attempting to install them in the virtual environment...")
+    
+    # Use virtual environment's pip for installation
+    pip_cmd = [str(venv_python), "-m", "pip", "install"]
     
     for package in missing_modules:
         print(f"Installing {package}...")
