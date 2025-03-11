@@ -19,7 +19,7 @@
 
 SCRIPT_VERSION="1.2.2"
 
-# Color definitions
+# Color definitions (platform-agnostic)
 RED='\033[1;31m'
 ORANGE='\033[0;33m'
 PURPLE='\033[0;35m'
@@ -30,13 +30,13 @@ NC='\033[0m'
 # Variables
 #=====================
 
-# Get current directory (macOS compatible)
+# Cross-platform path resolution (works on both Linux and macOS)
 QCLIENT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 WALLETS_DIR="$QCLIENT_DIR/wallets"
 CURRENT_WALLET_FILE="$QCLIENT_DIR/.current_wallet"
 
-# Initialize current wallet
+# Initialize current wallet (platform-agnostic)
 if [ -f "$CURRENT_WALLET_FILE" ]; then
     WALLET_NAME=$(cat "$CURRENT_WALLET_FILE")
 elif check_existing_wallets; then
@@ -60,7 +60,7 @@ QCLIENT_RELEASE_URL="https://releases.quilibrium.com/qclient-release"
 QUILIBRIUM_RELEASES="https://releases.quilibrium.com"
 
 #=====================
-# Dependency Checks and Auto-Install
+# Dependency Checks and Auto-Install (Cross-Platform)
 #=====================
 
 check_and_install_deps() {
@@ -77,41 +77,54 @@ check_and_install_deps() {
         echo -e "${ORANGE}⚠️ Missing dependencies: ${missing_deps[*]}${NC}"
         echo "These are required for the script to function properly."
 
-        # Check if Homebrew is installed
-        if ! command -v brew &> /dev/null; then
-            echo -e "${ORANGE}Homebrew is not installed. It's required to install missing dependencies.${NC}"
-            read -p "Would you like to install Homebrew? (y/n): " install_brew
-            if [[ "$install_brew" =~ ^[Yy]$ ]]; then
-                echo "Installing Homebrew..."
-                /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-                if [ $? -ne 0 ]; then
-                    echo -e "${RED}❌ Failed to install Homebrew. Please install it manually and try again.${NC}"
+        if [[ "$OSTYPE" == "darwin"* ]]; then
+            # macOS dependency installation via Homebrew
+            if ! command -v brew &> /dev/null; then
+                echo -e "${ORANGE}Homebrew is not installed. It's required to install missing dependencies.${NC}"
+                read -p "Would you like to install Homebrew? (y/n): " install_brew
+                if [[ "$install_brew" =~ ^[Yy]$ ]]; then
+                    echo "Installing Homebrew..."
+                    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+                    if [ $? -ne 0 ]; then
+                        echo -e "${RED}❌ Failed to install Homebrew. Please install it manually and try again.${NC}"
+                        exit 1
+                    fi
+                    eval "$(/opt/homebrew/bin/brew shellenv)"
+                else
+                    echo -e "${RED}❌ Cannot proceed without Homebrew. Please install it manually and rerun the script.${NC}"
                     exit 1
                 fi
-                # Add Homebrew to PATH (for current session)
-                eval "$(/opt/homebrew/bin/brew shellenv)"
-            else
-                echo -e "${RED}❌ Cannot proceed without Homebrew. Please install it manually and rerun the script.${NC}"
-                exit 1
             fi
+            for dep in "${missing_deps[@]}"; do
+                echo "Installing $dep via Homebrew..."
+                brew install "$dep"
+                if [ $? -ne 0 ]; then
+                    echo -e "${RED}❌ Failed to install $dep. Please install it manually and try again.${NC}"
+                    exit 1
+                fi
+            done
+        elif [[ "$OSTYPE" == "linux-gnu"* ]] && command -v apt-get &> /dev/null; then
+            # Linux dependency installation via apt-get
+            echo "Installing missing dependencies via apt-get..."
+            sudo apt-get update
+            for dep in "${missing_deps[@]}"; do
+                echo "Installing $dep..."
+                sudo DEBIAN_FRONTEND=noninteractive apt-get install -y "$dep"
+                if [ $? -ne 0 ]; then
+                    echo -e "${RED}❌ Failed to install $dep. Please install it manually and try again.${NC}"
+                    exit 1
+                fi
+            done
+        else
+            echo -e "${RED}❌ No supported package manager found. Please install manually: ${missing_deps[*]}${NC}"
+            exit 1
         fi
-
-        # Install missing dependencies via Homebrew
-        echo "Installing missing dependencies via Homebrew..."
-        for dep in "${missing_deps[@]}"; do
-            echo "Installing $dep..."
-            brew install "$dep"
-            if [ $? -ne 0 ]; then
-                echo -e "${RED}❌ Failed to install $dep. Please install it manually and try again.${NC}"
-                exit 1
-            fi
-        done
         echo -e "${BOLD}✅ All dependencies installed successfully!${NC}"
     fi
 }
 
 #=====================
-# Menu Interface
+# Menu Interface (Platform-Agnostic)
 #=====================
 
 display_menu() {
@@ -150,7 +163,7 @@ E) Exit                      v $SCRIPT_VERSION"
 }
 
 #=====================
-# Helper Functions
+# Helper Functions (Mostly Platform-Agnostic)
 #=====================
 
 format_title() {
@@ -435,6 +448,7 @@ download_latest_qclient() {
         
         cd "$QCLIENT_DIR" || exit 1
         
+        # Cross-platform OS and architecture detection
         case "$OSTYPE" in
             "linux-gnu"*)
                 release_os="linux"
@@ -546,36 +560,11 @@ check_existing_wallets() {
 # Menu Functions
 #=====================
 
-prompt_return_to_menu() {
-    echo
-    while true; do
-        echo
-        echo "----------------------------------------"
-        read -rp "Go back to Q1 Wallet menu? (y/n): " choice
-        case $choice in
-            [Yy]* ) return 0 ;;
-            [Nn]* ) return 1 ;;
-            * ) echo "Please answer Y or N." ;;
-        esac
-    done
-}
-
 press_any_key() {
     echo
     read -n 1 -s -r -p "Press any key to continue..."
     echo
     display_menu
-}
-
-check_balance() {
-    if ! check_wallet_encryption; then
-        return 1
-    fi
-    echo
-    echo "$(format_title "Token balance and account address")"
-    echo
-    $QCLIENT_EXEC token balance $FLAGS
-    echo
 }
 
 check_coins() {
@@ -589,11 +578,26 @@ check_coins() {
     echo "Loading your coins..."
     tput rc
     
-    # macOS date command
-    output=$($QCLIENT_EXEC token coins metadata $FLAGS | awk '{gsub("Timestamp ", ""); frame=$(NF-2); ts=$NF; gsub("T", " ", ts); gsub("+01:00", "", ts); cmd="date -jf \"%Y-%m-%d %H:%M:%S\" \""ts"\" \"+%d/%m/%Y %H.%M.%S\" 2>/dev/null"; cmd | getline newts; close(cmd); $(NF)=newts; print frame, $0}' | sort -k1,1nr | cut -d' ' -f2- | awk -F'Frame ' '{num=substr($2,1,index($2,",")-1); print num"|"$0}' | sort -t'|' -k1nr | cut -d'|' -f2-)
+    # Cross-platform date handling
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        output=$($QCLIENT_EXEC token coins metadata $FLAGS | awk '{gsub("Timestamp ", ""); frame=$(NF-2); ts=$NF; gsub("T", " ", ts); gsub("+01:00", "", ts); cmd="date -jf \"%Y-%m-%d %H:%M:%S\" \""ts"\" \"+%d/%m/%Y %H.%M.%S\" 2>/dev/null"; cmd | getline newts; close(cmd); $(NF)=newts; print frame, $0}' | sort -k1,1nr | cut -d' ' -f2- | awk -F'Frame ' '{num=substr($2,1,index($2,",")-1); print num"|"$0}' | sort -t'|' -k1nr | cut -d'|' -f2-)
+    else
+        output=$($QCLIENT_EXEC token coins metadata $FLAGS | awk '{gsub("Timestamp ", ""); frame=$(NF-2); ts=$NF; gsub("T", " ", ts); gsub("+01:00", "", ts); cmd="date -d \""ts"\" \"+%d/%m/%Y %H.%M.%S\" 2>/dev/null"; cmd | getline newts; close(cmd); $(NF)=newts; print frame, $0}' | sort -k1,1nr | cut -d' ' -f2- | awk -F'Frame ' '{num=substr($2,1,index($2,",")-1); print num"|"$0}' | sort -t'|' -k1nr | cut -d'|' -f2-)
+    fi
     
     tput el
     echo "$output"
+    echo
+}
+
+check_balance() {
+    if ! check_wallet_encryption; then
+        return 1
+    fi
+    echo
+    echo "$(format_title "Token balance and account address")"
+    echo
+    $QCLIENT_EXEC token balance $FLAGS
     echo
 }
 
@@ -1581,7 +1585,7 @@ Use this script at your own risk and always verify transactions before confirmin
 }
 
 check_for_updates() {
-    local GITHUB_RAW_URL="https://raw.githubusercontent.com/lamat1111/Q1-Wallet/main/menu.sh"
+    local GITHUB_RAW_URL="https://raw.githubusercontent.com/lamat1111/Q1-Wallet/main/test/linux-macOS/menu.sh"
     local SCRIPT_PATH="$QCLIENT_DIR/menu.sh"
     local LATEST_VERSION
     
