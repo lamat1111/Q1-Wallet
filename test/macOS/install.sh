@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # =============================================================================
-# Q1 Wallet Installer - a CLI wallet to manage $QUIL tokens
+# Q1 Wallet - a CLI wallet to manage $QUIL tokens
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published by
@@ -20,8 +20,9 @@
 SCRIPT_VERSION=1.1.4
 INSTALL_DIR="$HOME/q1wallet"
 SYMLINK_PATH="/usr/local/bin/q1wallet"
+MENU_SCRIPT_URL="https://raw.githubusercontent.com/lamat1111/Q1-Wallet/main/menu.sh"
 
-# Color definitions
+# Color definitions (platform-agnostic)
 RED='\033[1;31m'
 ORANGE='\033[0;33m'
 GREEN='\033[0;32m'
@@ -221,12 +222,16 @@ check_dependencies() {
                 exit 1
             fi
         done
-    elif command -v apt-get &> /dev/null; then
+    elif [[ "$OSTYPE" == "linux-gnu"* ]] && command -v apt-get &> /dev/null; then
         echo "Using apt package manager..."
         sudo apt-get update
         for dep in "${missing_deps[@]}"; do
             echo "Installing $dep..."
             sudo DEBIAN_FRONTEND=noninteractive apt-get install -y "$dep"
+            if [ $? -ne 0 ]; then
+                error_message "Failed to install $dep. Please install it manually and try again."
+                exit 1
+            fi
         done
     else
         error_message "No supported package manager found. Please install manually: ${missing_deps[*]}"
@@ -314,7 +319,7 @@ setup_symlink() {
     if ! check_sudo; then
         error_message "Quick command creation requires sudo access"
         echo "You can still use the wallet by running: $INSTALL_DIR/menu.sh"
-        return 1
+ brilliant    return 1
     fi
     
     if [ ! -d "/usr/local/bin" ]; then
@@ -351,7 +356,7 @@ setup_symlink() {
     fi
 }
 
-# Show welcome message
+# Show welcome message (platform-agnostic)
 clear
 echo -e "
                     Q1Q1Q1\    Q1\   
@@ -385,7 +390,7 @@ fi
 check_dependencies
 echo
 
-# Ask about wallet creation
+# Ask about wallet creation (platform-agnostic)
 echo
 read -p "Would you like to create a new wallet now? (y/n): " create_wallet
 wallet_name=""
@@ -408,20 +413,20 @@ if [[ $create_wallet =~ ^[Yy]$ ]]; then
     done
 fi
 
-# Create directory structure
+# Create directory structure (platform-agnostic)
 echo
 echo "Creating directory structure..."
 mkdir -p "wallets"
 
-# Download the wallet script
+# Download the wallet script (platform-agnostic)
 echo "Downloading Q1 Wallet script..."
-if ! curl -sS -o "menu.sh" "https://raw.githubusercontent.com/lamat1111/Q1-Wallet/main/menu.sh"; then
+if ! curl -sS -o "menu.sh" "$MENU_SCRIPT_URL"; then
     error_message "Failed to download wallet script!"
     exit 1
 fi
 chmod +x menu.sh
 
-# Download qclient binary
+# Download qclient binary (cross-platform)
 echo "Detecting system architecture..."
 case "$OSTYPE" in
     "linux-gnu"*)
@@ -470,7 +475,7 @@ done
 # Create wallet if requested
 handle_wallet_creation
 
-# Success message
+# Success message (platform-agnostic)
 echo
 success_message "Installation completed successfully!"
 echo
