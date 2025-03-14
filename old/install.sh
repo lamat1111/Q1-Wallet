@@ -17,6 +17,8 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 # =============================================================================
 
+# LINUX ONLY
+
 SCRIPT_VERSION=1.1.4
 INSTALL_DIR="$HOME/q1wallet"
 SYMLINK_PATH="/usr/local/bin/q1wallet"
