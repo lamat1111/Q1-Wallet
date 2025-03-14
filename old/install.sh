@@ -1,7 +1,7 @@
-#!/usr/bin/env bash
+#!/bin/bash
 
 # =============================================================================
-# Q1 Wallet - a CLI wallet to manage $QUIL tokens
+# Q1 Wallet Installer - a CLI wallet to manage $QUIL tokens
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published by
@@ -17,17 +17,16 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 # =============================================================================
 
-SCRIPT_VERSION=1.1.5
+SCRIPT_VERSION=1.1.4
 INSTALL_DIR="$HOME/q1wallet"
 SYMLINK_PATH="/usr/local/bin/q1wallet"
-MENU_SCRIPT_URL="https://raw.githubusercontent.com/lamat1111/Q1-Wallet/main/test/linux-macOS/menu.sh"
 
-# Color definitions (platform-agnostic)
-RED='\033[1;31m'
-ORANGE='\033[0;33m'
-GREEN='\033[0;32m'
-BOLD='\033[1m'
-NC='\033[0m'
+# Color definitions
+RED='\033[1;31m'      # Bright red for errors
+ORANGE='\033[0;33m'   # Orange for warnings
+GREEN='\033[0;32m'    # Green for success
+BOLD='\033[1m'        # Bold for titles and menu
+NC='\033[0m'          # No Color - reset
 
 # Helper functions
 error_message() {
@@ -42,13 +41,16 @@ success_message() {
     echo -e "${GREEN}✅ $1${NC}"
 }
 
+# Check if sudo is available and user has permissions
 check_sudo() {
     if ! command -v sudo &> /dev/null; then
         error_message "sudo is not installed on this system"
         return 1
     fi
 
+    # Try to run sudo with -n flag (non-interactive) to check if we have permissions
     if ! sudo -n true 2>/dev/null; then
+        # If we don't have cached credentials, ask for password
         echo "Sudo access is required to create the quick command."
         if ! sudo true; then
             error_message "Failed to obtain sudo privileges. Command creation aborted."
@@ -66,36 +68,28 @@ check_system_compatibility() {
                     return 0 ;;
                 *)
                     error_message "Unsupported Linux architecture: $(uname -m)"
-                    echo "Q1 Wallet currently supports only x86_64 and aarch64 architectures on Linux."
-                    exit 1
-                    ;;
-            esac
-            ;;
-        "darwin"*)
-            case "$(uname -m)" in
-                "x86_64"|"arm64")
-                    return 0 ;;
-                *)
-                    error_message "Unsupported macOS architecture: $(uname -m)"
-                    echo "Q1 Wallet currently supports only x86_64 and arm64 architectures on macOS."
+                    echo "Q1 Wallet currently supports only x86_64 and aarch64 architectures."
                     exit 1
                     ;;
             esac
             ;;
         *)
             error_message "Unsupported operating system: $OSTYPE"
-            echo "Q1 Wallet currently supports Linux and macOS only."
+            echo "Q1 Wallet currently supports Linux only."
             exit 1
             ;;
     esac
 }
 
 check_existing_installation() {
+    # Check if both menu.sh and wallets folder exist
     if [ -f "$INSTALL_DIR/menu.sh" ] && [ -d "$INSTALL_DIR/wallets" ]; then
         echo -e "\n${ORANGE}Existing Q1 Wallet installation detected!${NC}"
         echo "Location: $INSTALL_DIR"
         
+        # Check for wallet subfolders and list them
         if [ -d "$INSTALL_DIR/wallets" ]; then
+            # Use find to get only directories, one level deep
             wallet_dirs=$(find "$INSTALL_DIR/wallets" -mindepth 1 -maxdepth 1 -type d 2>/dev/null)
             if [ -n "$wallet_dirs" ]; then
                 echo -e "\nExisting wallets found:"
@@ -132,6 +126,8 @@ check_existing_installation() {
             esac
         done
     fi
+    
+    # No valid installation found, return false
     return 0
 }
 
@@ -139,12 +135,15 @@ reinstall_software_only() {
     echo -e "\nReinstalling Q1 Wallet software..."
     echo "Keeping existing wallets and configuration"
     
+    # Backup current wallet selection if it exists
     if [ -f "$INSTALL_DIR/.current_wallet" ]; then
         cp "$INSTALL_DIR/.current_wallet" "$INSTALL_DIR/.current_wallet.bak"
     fi
     
+    # Remove everything except wallets directory
     find "$INSTALL_DIR" -mindepth 1 -maxdepth 1 ! -name 'wallets' -exec rm -rf {} +
     
+    # Restore current wallet selection if it existed
     if [ -f "$INSTALL_DIR/.current_wallet.bak" ]; then
         mv "$INSTALL_DIR/.current_wallet.bak" "$INSTALL_DIR/.current_wallet"
     fi
@@ -165,20 +164,22 @@ confirm_full_reinstall() {
     echo "Removing existing installation..."
     rm -rf "$INSTALL_DIR"
     
+    # Create fresh installation directory
     echo "Creating fresh installation directory..."
     mkdir -p "$INSTALL_DIR"
 
-    cd "$INSTALL_DIR" || exit 1
+    cd $INSTALL_DIR
     
     return 0
 }
 
 check_dependencies() {
-    local deps=("curl" "unzip" "zip" "bc")
+    local deps=("curl" "unzip" "bc" "zip")
     local missing_deps=()
     
     echo "Checking required dependencies..."
     
+    # Check for missing dependencies
     for dep in "${deps[@]}"; do
         if ! command -v "$dep" &> /dev/null; then
             missing_deps+=("$dep")
@@ -188,6 +189,7 @@ check_dependencies() {
         fi
     done
     
+    # If all dependencies are present, return
     if [ ${#missing_deps[@]} -eq 0 ]; then
         success_message "All dependencies are installed!"
         return 0
@@ -195,49 +197,19 @@ check_dependencies() {
     
     echo -e "\nInstalling missing dependencies: ${missing_deps[*]}"
     
-    if [[ "$OSTYPE" == "darwin"* ]]; then
-        if ! command -v brew &> /dev/null; then
-            echo -e "${ORANGE}Homebrew is not installed. It's required to install missing dependencies.${NC}"
-            read -p "Would you like to install Homebrew? (y/n): " install_brew
-            if [[ "$install_brew" =~ ^[Yy]$ ]]; then
-                echo "Installing Homebrew..."
-                /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-                if [ $? -ne 0 ]; then
-                    error_message "Failed to install Homebrew. Please install it manually and try again."
-                    exit 1
-                fi
-                eval "$(/opt/homebrew/bin/brew shellenv)"
-            else
-                error_message "Cannot proceed without Homebrew. Please install it manually and rerun the script."
-                exit 1
-            fi
-        fi
-        
-        echo "Using Homebrew package manager..."
-        for dep in "${missing_deps[@]}"; do
-            echo "Installing $dep..."
-            brew install "$dep"
-            if [ $? -ne 0 ]; then
-                error_message "Failed to install $dep. Please install it manually and try again."
-                exit 1
-            fi
-        done
-    elif [[ "$OSTYPE" == "linux-gnu"* ]] && command -v apt-get &> /dev/null; then
+    if command -v apt-get &> /dev/null; then
         echo "Using apt package manager..."
-        sudo apt-get update
+        sudo DEBIAN_FRONTEND=noninteractive apt-get update
         for dep in "${missing_deps[@]}"; do
             echo "Installing $dep..."
             sudo DEBIAN_FRONTEND=noninteractive apt-get install -y "$dep"
-            if [ $? -ne 0 ]; then
-                error_message "Failed to install $dep. Please install it manually and try again."
-                exit 1
-            fi
         done
     else
-        error_message "No supported package manager found. Please install manually: ${missing_deps[*]}"
+        error_message "This installer requires apt package manager. Please install manually: ${missing_deps[*]}"
         exit 1
     fi
     
+    # Verify installation
     local failed_deps=()
     for dep in "${missing_deps[@]}"; do
         if ! command -v "$dep" &> /dev/null; then
@@ -256,13 +228,14 @@ check_dependencies() {
 check_wallet_exists() {
     local wallet_name="$1"
     if [ -d "wallets/$wallet_name" ]; then
-        return 0
+        return 0  # wallet exists
     fi
-    return 1
+    return 1  # wallet doesn't exist
 }
 
 handle_wallet_creation() {
     if [[ -n "$wallet_name" ]]; then
+        # For software-only reinstall, check if wallet already exists
         if [ -d "wallets/$wallet_name" ]; then
             warning_message "Wallet '$wallet_name' already exists"
             read -p "Would you like to create a different wallet? (y/n): " create_different
@@ -283,7 +256,7 @@ handle_wallet_creation() {
                     break
                 done
             else
-                wallet_name=""
+                wallet_name=""  # Clear wallet_name if user doesn't want to create a different one
                 return
             fi
         fi
@@ -298,94 +271,72 @@ handle_wallet_creation() {
 setup_symlink() {
     echo -e "\nQuick command setup"
     echo "-------------------"
+    echo "Create a 'q1wallet' quick commands to call the menu."
+    echo "Requires sudo access to create the command in /usr/local/bin"
     
-    if [[ "$OSTYPE" == "darwin"* ]]; then
-        # macOS alias approach (from previous response)
-        echo "On macOS, this will add an alias to your shell profile"
-        read -p "Would you like to set up the quick command? (y/n): " setup_cmd
-        if [[ ! $setup_cmd =~ ^[Yy]$ ]]; then
-            echo "Skipping quick command setup."
-            echo "You can still use the wallet by running: $INSTALL_DIR/menu.sh"
+    read -p "Would you like to set up the quick command? (y/n): " setup_cmd
+    if [[ ! $setup_cmd =~ ^[Yy]$ ]]; then
+        echo "Skipping quick command setup."
+        echo "You can still use the wallet by running: $INSTALL_DIR/menu.sh"
+        return 0
+    fi
+    
+    # Check if symlink already exists with correct target
+    if [ -L "$SYMLINK_PATH" ]; then
+        current_target=$(readlink -f "$SYMLINK_PATH")
+        if [ "$current_target" = "$INSTALL_DIR/menu.sh" ]; then
+            success_message "Command 'q1wallet' is already set up correctly"
             return 0
         fi
-        # ... rest of macOS alias code from previous response ...
-    else  # Linux and WSL
-        echo "Create a 'q1wallet' quick command to call the menu."
-        echo "Requires sudo access to create the command in /usr/local/bin"
-        read -p "Would you like to set up the quick command? (y/n): " setup_cmd
-        if [[ ! $setup_cmd =~ ^[Yy]$ ]]; then
-            echo "Skipping quick command setup."
-            echo "You can still use the wallet by running: $INSTALL_DIR/menu.sh"
-            return 0
-        fi
-
-        # Check if /usr/local/bin is in PATH
-        if ! echo "$PATH" | grep -q "/usr/local/bin"; then
-            warning_message "/usr/local/bin is not in your PATH"
-            echo "The quick command may not work until you add /usr/local/bin to your PATH"
-            echo "You can add it by including this in your ~/.bashrc or ~/.zshrc:"
-            echo "export PATH=\$PATH:/usr/local/bin"
-        fi
-
-        # Check existing symlink
-        if [ -L "$SYMLINK_PATH" ]; then
-            current_target=$(readlink "$SYMLINK_PATH")
-            if [ "$current_target" = "$INSTALL_DIR/menu.sh" ]; then
-                success_message "Command 'q1wallet' is already set up correctly"
-                return 0
-            else
-                echo "Existing symlink points to: $current_target"
-                read -p "Would you like to replace it? (y/n): " replace
-                if [[ ! $replace =~ ^[Yy]$ ]]; then
-                    echo "Skipping quick command setup."
-                    return 0
-                fi
-            fi
-        elif [ -e "$SYMLINK_PATH" ]; then
-            error_message "A file already exists at $SYMLINK_PATH"
-            echo "Please remove it manually and rerun the installer"
-            return 1
-        fi
-
-        # Ensure sudo access
-        if ! check_sudo; then
-            error_message "Quick command creation requires sudo access"
-            echo "You can still use the wallet by running: $INSTALL_DIR/menu.sh"
-            return 1
-        fi
-
-        # Create /usr/local/bin if it doesn't exist
-        if [ ! -d "/usr/local/bin" ]; then
-            echo "Creating /usr/local/bin directory..."
-            if ! sudo mkdir -p "/usr/local/bin"; then
-                error_message "Failed to create /usr/local/bin directory"
-                echo "You can still use the wallet by running: $INSTALL_DIR/menu.sh"
-                return 1
-            fi
-        fi
-
-        # Create the symlink
-        echo "Creating symlink to $INSTALL_DIR/menu.sh..."
-        if ! sudo ln -sf "$INSTALL_DIR/menu.sh" "$SYMLINK_PATH"; then
-            error_message "Failed to create quick command 'q1wallet'"
-            echo "You can still use the wallet by running: $INSTALL_DIR/menu.sh"
-            echo "To create the quick command later, run: sudo ln -sf $INSTALL_DIR/menu.sh $SYMLINK_PATH"
-            return 1
-        fi
-
-        if [ -L "$SYMLINK_PATH" ]; then
-            success_message "Command 'q1wallet' installed successfully!"
-            echo "You can now run 'q1wallet' from anywhere"
-            return 0
-        else
-            error_message "Symlink creation appeared to succeed but link not found"
+    fi
+    
+    # Check sudo access first
+    if ! check_sudo; then
+        error_message "Quick command creation requires sudo access"
+        echo "You can still use the wallet by running: $INSTALL_DIR/menu.sh"
+        return 1
+    fi
+    
+    # First ensure /usr/local/bin exists
+    if [ ! -d "/usr/local/bin" ]; then
+        echo "Creating /usr/local/bin directory..."
+        if ! sudo mkdir -p /usr/local/bin; then
+            error_message "Failed to create /usr/local/bin directory"
             echo "You can still use the wallet by running: $INSTALL_DIR/menu.sh"
             return 1
         fi
     fi
+    
+    # Check if a non-symlink file exists at the target location
+    if [ -e "$SYMLINK_PATH" ] && [ ! -L "$SYMLINK_PATH" ]; then
+        error_message "A file already exists at $SYMLINK_PATH but is not a symlink"
+        echo "Please remove it manually and run the installer again"
+        return 1
+    fi
+
+    # Create or update the symlink with explicit error checking
+    echo "Creating symlink to $INSTALL_DIR/menu.sh..."
+    if ! sudo ln -sf "$INSTALL_DIR/menu.sh" "$SYMLINK_PATH"; then
+        error_message "Failed to create quick command 'q1wallet'"
+        echo "You can still use the wallet by running: $INSTALL_DIR/menu.sh"
+        echo "To create the quick command later, run: sudo ln -sf $INSTALL_DIR/menu.sh $SYMLINK_PATH"
+        return 1
+    fi
+
+    # Verify the symlink was created
+    if [ -L "$SYMLINK_PATH" ]; then
+        success_message "Command 'q1wallet' installed successfully!"
+        echo "You can now run 'q1wallet' from anywhere"
+        return 0
+    else
+        error_message "Symlink creation appeared to succeed but link not found"
+        echo "You can still use the wallet by running: $INSTALL_DIR/menu.sh"
+        return 1
+    fi
 }
 
-# Show welcome message (platform-agnostic)
+
+# Show welcome message
 clear
 echo -e "
                     Q1Q1Q1\    Q1\   
@@ -408,6 +359,7 @@ echo
 check_existing_installation
 echo
 
+# Add this section to ensure we're in the correct directory
 if [ "$PWD" != "$INSTALL_DIR" ]; then
     echo "Changing to installation directory: $INSTALL_DIR"
     cd "$INSTALL_DIR" || {
@@ -416,10 +368,13 @@ if [ "$PWD" != "$INSTALL_DIR" ]; then
     }
 fi
 
+
 check_dependencies
 echo
 
-# Ask about wallet creation (platform-agnostic)
+
+
+# Ask about wallet creation
 echo
 read -p "Would you like to create a new wallet now? (y/n): " create_wallet
 wallet_name=""
@@ -427,10 +382,10 @@ wallet_name=""
 if [[ $create_wallet =~ ^[Yy]$ ]]; then
     while true; do
         echo
-        read -p "Enter wallet name (a-z, 0-9, -, _): " wallet_name
+        read -p "Enter wallet name (no spaces): " wallet_name
         
-        if [[ ! "$wallet_name" =~ ^[a-z0-9_-]+$ ]]; then
-            error_message "Invalid wallet name. Use only lowercase letters, numbers, dashes (-) and underscores (_)."
+        if [[ ! "$wallet_name" =~ ^[A-Za-z0-9_-]+$ ]]; then
+            error_message "Invalid wallet name. Use only letters, numbers, dashes (-) and underscores (_)."
             continue
         fi
         
@@ -442,20 +397,20 @@ if [[ $create_wallet =~ ^[Yy]$ ]]; then
     done
 fi
 
-# Create directory structure (platform-agnostic)
+# Create directory structure
 echo
 echo "Creating directory structure..."
 mkdir -p "wallets"
 
-# Download the wallet script (platform-agnostic)
+# Download the wallet script
 echo "Downloading Q1 Wallet script..."
-if ! curl -sS -o "menu.sh" "$MENU_SCRIPT_URL"; then
+if ! curl -sS -o "menu.sh" "https://raw.githubusercontent.com/lamat1111/Q1-Wallet/main/menu.sh"; then
     error_message "Failed to download wallet script!"
     exit 1
 fi
 chmod +x menu.sh
 
-# Download qclient binary (cross-platform)
+# Download qclient binary
 echo "Detecting system architecture..."
 case "$OSTYPE" in
     "linux-gnu"*)
@@ -482,6 +437,7 @@ echo
 QCLIENT_RELEASE_URL="https://releases.quilibrium.com/qclient-release"
 QUILIBRIUM_RELEASES="https://releases.quilibrium.com"
 
+# Fetch the file list
 files=$(curl -s "$QCLIENT_RELEASE_URL" | grep "$release_os-$release_arch" || true)
 
 if [ -z "$files" ]; then
@@ -489,6 +445,7 @@ if [ -z "$files" ]; then
     exit 1
 fi
 
+# Download files
 for file in $files; do
     echo "Downloading $file..."
     if ! curl -# -f "$QUILIBRIUM_RELEASES/$file" > "$file"; then
@@ -496,15 +453,20 @@ for file in $files; do
         continue
     fi
     
+    # Make binary executable if it's not a signature or digest file
     if [[ ! $file =~ \.(dgst|sig)$ ]]; then
         chmod +x "$file"
     fi
 done
 
 # Create wallet if requested
-handle_wallet_creation
+if [[ -n "$wallet_name" ]]; then
+    echo "Creating wallet: $wallet_name"
+    mkdir -p "wallets/$wallet_name/.config"
+    echo "$wallet_name" > .current_wallet
+fi
 
-# Success message (platform-agnostic)
+# Success message
 echo
 success_message "Installation completed successfully!"
 echo

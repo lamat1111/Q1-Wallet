@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 
 # =============================================================================
 # Q1 Wallet - a CLI wallet to manage $QUIL tokens
@@ -17,34 +17,39 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 # =============================================================================
 
-SCRIPT_VERSION="1.2.3"
+# Define the version number here
+SCRIPT_VERSION="1.2.2"
 
-# Color definitions (platform-agnostic)
-RED='\033[1;31m'
-ORANGE='\033[0;33m'
-PURPLE='\033[0;35m'
-BOLD='\033[1m'
-NC='\033[0m'
+# Color definitions
+RED='\033[1;31m'      # Bright red for errors
+ORANGE='\033[0;33m'   # Orange for warnings
+PURPLE='\033[0;35m'   # Purple for current wallet
+BOLD='\033[1m'        # Bold for titles and menu
+NC='\033[0m'          # No Color - reset
 
 #=====================
 # Variables
 #=====================
 
-# Cross-platform path resolution (works on both Linux and macOS)
-QCLIENT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Get current directory (where the script is running)
+QCLIENT_DIR="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"
 
+# Wallet management variables
 WALLETS_DIR="$QCLIENT_DIR/wallets"
 CURRENT_WALLET_FILE="$QCLIENT_DIR/.current_wallet"
 
-# Initialize current wallet (platform-agnostic)
+# Initialize current wallet
 if [ -f "$CURRENT_WALLET_FILE" ]; then
     WALLET_NAME=$(cat "$CURRENT_WALLET_FILE")
 elif check_existing_wallets; then
+    # Get the first wallet found
     WALLET_NAME=$(find "$WALLETS_DIR" -mindepth 2 -maxdepth 2 -type d -name ".config" | head -n1 | awk -F'/' '{print $(NF-2)}')
     echo "$WALLET_NAME" > "$CURRENT_WALLET_FILE"
 else
+    # No existing wallets found, create default
     WALLET_NAME="Wallet_1"
     echo "$WALLET_NAME" > "$CURRENT_WALLET_FILE"
+    # Create initial wallet structure
     mkdir -p "$WALLETS_DIR/$WALLET_NAME/.config"
 fi
 
@@ -54,81 +59,21 @@ get_config_flags() {
 
 FLAGS=$(get_config_flags)
 
+# Find qclient binary (excluding signature and identifier files)
 QCLIENT_EXEC=$(find "$QCLIENT_DIR" -maxdepth 1 -type f -name "qclient-*" ! -name "*.dgst*" ! -name "*.sig*" ! -name "*Zone.Identifier*" | sort -V | tail -n 1)
 
+# Qclient release urls
 QCLIENT_RELEASE_URL="https://releases.quilibrium.com/qclient-release"
 QUILIBRIUM_RELEASES="https://releases.quilibrium.com"
 
-#=====================
-# Dependency Checks and Auto-Install (Cross-Platform)
-#=====================
-
-check_and_install_deps() {
-    local deps=("curl" "unzip" "zip" "bc")
-    local missing_deps=()
-
-    for dep in "${deps[@]}"; do
-        if ! command -v "$dep" &> /dev/null; then
-            missing_deps+=("$dep")
-        fi
-    done
-
-    if [ ${#missing_deps[@]} -gt 0 ]; then
-        echo -e "${ORANGE}⚠️ Missing dependencies: ${missing_deps[*]}${NC}"
-        echo "These are required for the script to function properly."
-
-        if [[ "$OSTYPE" == "darwin"* ]]; then
-            # macOS dependency installation via Homebrew
-            if ! command -v brew &> /dev/null; then
-                echo -e "${ORANGE}Homebrew is not installed. It's required to install missing dependencies.${NC}"
-                read -p "Would you like to install Homebrew? (y/n): " install_brew
-                if [[ "$install_brew" =~ ^[Yy]$ ]]; then
-                    echo "Installing Homebrew..."
-                    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-                    if [ $? -ne 0 ]; then
-                        echo -e "${RED}❌ Failed to install Homebrew. Please install it manually and try again.${NC}"
-                        exit 1
-                    fi
-                    eval "$(/opt/homebrew/bin/brew shellenv)"
-                else
-                    echo -e "${RED}❌ Cannot proceed without Homebrew. Please install it manually and rerun the script.${NC}"
-                    exit 1
-                fi
-            fi
-            for dep in "${missing_deps[@]}"; do
-                echo "Installing $dep via Homebrew..."
-                brew install "$dep"
-                if [ $? -ne 0 ]; then
-                    echo -e "${RED}❌ Failed to install $dep. Please install it manually and try again.${NC}"
-                    exit 1
-                fi
-            done
-        elif [[ "$OSTYPE" == "linux-gnu"* ]] && command -v apt-get &> /dev/null; then
-            # Linux dependency installation via apt-get
-            echo "Installing missing dependencies via apt-get..."
-            sudo apt-get update
-            for dep in "${missing_deps[@]}"; do
-                echo "Installing $dep..."
-                sudo DEBIAN_FRONTEND=noninteractive apt-get install -y "$dep"
-                if [ $? -ne 0 ]; then
-                    echo -e "${RED}❌ Failed to install $dep. Please install it manually and try again.${NC}"
-                    exit 1
-                fi
-            done
-        else
-            echo -e "${RED}❌ No supported package manager found. Please install manually: ${missing_deps[*]}${NC}"
-            exit 1
-        fi
-        echo -e "${BOLD}✅ All dependencies installed successfully!${NC}"
-    fi
-}
 
 #=====================
-# Menu Interface (Platform-Agnostic)
+# Menu interface
 #=====================
 
 display_menu() {
     clear
+    # First part without colors
     echo "
                 Q1Q1Q1\    Q1\   
                Q1  __Q1\ Q1Q1 |  
@@ -157,15 +102,16 @@ S) Security settings         H) Help
 D) Donations 
 --------------------------------------------------------    
 E) Exit                      v $SCRIPT_VERSION"
-    echo
-    echo -e "${ORANGE}The Q1 WALLET is still in beta. Use at your own risk.${NC}"
-    echo
+echo
+echo -e "${ORANGE}The Q1 WALLET is still in beta. Use at your own risk.${NC}"
+echo
 }
 
 #=====================
-# Helper Functions (Mostly Platform-Agnostic)
+# Helper functions
 #=====================
 
+# Modified helper functions with proper color display
 format_title() {
     local title="$1"
     local width=${#title}
@@ -184,13 +130,14 @@ warning_message() {
     echo -e "${ORANGE}⚠️  $1${NC}"
 }
 
+# Pre-action confirmation function
 confirm_proceed() {
     local action_name="$1"
     local description="$2"
     
     echo
     echo "$(format_title "$action_name")"
-    [ -n "$description" ] && echo "$description"
+    [ -n "$description" ] && echo "$description"  # Removed the \n
     echo
     
     while true; do
@@ -206,6 +153,7 @@ confirm_proceed() {
     done
 }
 
+# Debug function
 debug_info() {
     local command_to_debug="$1"
     
@@ -264,6 +212,7 @@ debug_info() {
     echo "------------------------"
 }
 
+# Function to validate Quilibrium hashes (addresses, transaction IDs, etc)
 validate_hash() {
     local hash="$1"
     local hash_regex="^0x[0-9a-fA-F]{64}$"
@@ -274,6 +223,7 @@ validate_hash() {
     return 0
 }
 
+# wait with spinner - goes back to menu on CTRL + C
 wait_with_spinner() {
     local message="${1:-Wait for %s seconds...}"
     local seconds="$2"
@@ -282,6 +232,7 @@ wait_with_spinner() {
 
     message="${message//%s/"$seconds (CTRL+C to esc)"}"
 
+    # Set up trap for SIGINT (Ctrl+C)
     trap 'kill $pid 2>/dev/null; wait $pid 2>/dev/null; echo -en "\r\033[K"; echo -e "\n\nOperation cancelled. Returning to main menu..."; main; exit 0' INT
 
     (
@@ -299,6 +250,7 @@ wait_with_spinner() {
     wait $pid 2>/dev/null
     echo -en "\r\033[K"
     
+    # Remove the trap after completion
     trap - INT
 }
 
@@ -312,6 +264,7 @@ check_exit() {
     return 1
 }
 
+# Function to check and setup qclient binary
 check_qclient_binary() {
     if [ -z "$QCLIENT_EXEC" ]; then
         echo
@@ -321,8 +274,14 @@ check_qclient_binary() {
     else
         chmod +x "$QCLIENT_EXEC"
     fi
+
+    # Debug output
+    #echo "Found binary: $QCLIENT_EXEC"
+    #echo "Found config: $QCLIENT_DIR/.config"
+    #echo "Config flag: $FLAGS"
 }
 
+# Function to cleanup old release files
 cleanup_old_releases() {
     local QCLIENT_DIR="$1"
     local NEW_VERSION="$2"
@@ -332,6 +291,7 @@ cleanup_old_releases() {
     echo "Directory: $QCLIENT_DIR"
     echo "New version: $NEW_VERSION"
     
+    # Find all qclient files
     find "$QCLIENT_DIR" -maxdepth 1 -type f -name "qclient-*" | while read -r file; do
         local file_version
         file_version=$(echo "$file" | grep -o 'qclient-[0-9]\+\.[0-9]\+\.[0-9]\+\.*[0-9]*' | sed 's/qclient-//')
@@ -339,11 +299,13 @@ cleanup_old_releases() {
         echo "Found file: $file"
         echo "Extracted version: $file_version"
         
+        # Skip if we couldn't extract a version or if it's the new version
         if [ -z "$file_version" ] || [ "$file_version" = "$NEW_VERSION" ]; then
             echo "Skipping file (either no version found or matches new version)"
             continue
         fi
         
+        # Remove the old version and its associated files
         echo "Removing old version files: qclient-$file_version*"
         rm -f "$QCLIENT_DIR/qclient-$file_version"*
     done
@@ -351,6 +313,7 @@ cleanup_old_releases() {
     echo "✅ Cleanup complete"
 }
 
+# Function to compare version strings
 version_gt() {
     test "$(printf '%s\n' "$@" | sort -V | head -n 1)" != "$1"
 }
@@ -358,6 +321,7 @@ version_gt() {
 check_qclient_version() {
     echo
     echo "Checking Qclient version..."
+    # Get remote version
     local REMOTE_VERSION
     REMOTE_VERSION=$(curl -s "$QCLIENT_RELEASE_URL" | grep -E "qclient-[0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?" | head -n1 | sed -E 's/.*qclient-([0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?).*/\1/')
     
@@ -366,6 +330,7 @@ check_qclient_version() {
         return 1
     fi
     
+    # Find the qclient binary
     local QCLIENT_PATH
     QCLIENT_PATH=$(find "$QCLIENT_DIR" -maxdepth 1 -type f -name "qclient-*" ! -name "*.dgst*" ! -name "*.sig*" ! -name "*Zone.Identifier*" | sort -V | tail -n 1)
     
@@ -379,6 +344,7 @@ check_qclient_version() {
         return 1
     fi
     
+    # Extract local version from binary name
     local LOCAL_VERSION
     if [[ "$QCLIENT_PATH" =~ qclient-([0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?) ]]; then
         LOCAL_VERSION="${BASH_REMATCH[1]}"
@@ -396,13 +362,15 @@ check_qclient_version() {
         warning_message "A new version of Qclient is available!"
         echo
         
+        # Download new version
         if download_latest_qclient; then
+            # Only cleanup after successful download
             cleanup_old_releases "$QCLIENT_DIR" "$REMOTE_VERSION"
             echo "✅ Update completed successfully!"
             echo
             echo "Restarting script in 3 seconds..."
             sleep 3
-            exec "$0"
+            exec "$0"  # Restart the script after cleanup
         else
             error_message "Update failed"
             return 1
@@ -438,17 +406,20 @@ download_latest_qclient() {
         echo "This may take some time, don't close your terminal."
         echo
         
+        # Ensure we're using the correct directory
         if [ ! -d "$QCLIENT_DIR" ]; then
             mkdir -p "$QCLIENT_DIR"
         fi
         
+        # Create .config directory if it doesn't exist
         if [ ! -d "$QCLIENT_DIR/.config" ]; then
             mkdir -p "$QCLIENT_DIR/.config"
         fi
         
+        # Change to the QCLIENT_DIR directory
         cd "$QCLIENT_DIR" || exit 1
         
-        # Cross-platform OS and architecture detection
+        # Detect OS and architecture
         case "$OSTYPE" in
             "linux-gnu"*)
                 release_os="linux"
@@ -467,18 +438,21 @@ download_latest_qclient() {
             *) error_message "Error: Unsupported operating system ($OSTYPE)"; return 1 ;;
         esac
 
+        # Fetch the file list with error handling
         if ! files=$(curl -s -f --connect-timeout 10 --max-time 30 "$QCLIENT_RELEASE_URL"); then
             error_message "Error: Failed to connect to $QCLIENT_RELEASE_URL"
             echo "Please check your internet connection and try again."
             return 1
         fi
 
+        # Filter files for current architecture and store the version
         matched_files=$(echo "$files" | grep "$release_os-$release_arch" || true)
         if [ -z "$matched_files" ]; then
             error_message "Error: No qclient files found for $release_os-$release_arch"
             return 1
         fi
 
+        # Extract version from the filename
         VERSION_PATTERN="qclient-([0-9]+\.[0-9]+\.[0-9]+)"
         if [[ $(echo "$matched_files" | head -n1) =~ $VERSION_PATTERN ]]; then
             NEW_VERSION="${BASH_REMATCH[1]}"
@@ -488,15 +462,17 @@ download_latest_qclient() {
             return 1
         fi
 
+        # Download files
         echo "$matched_files" | while read -r file; do
             if [ ! -f "$file" ]; then
                 echo "Downloading $file..."
                 if ! curl -s -f --connect-timeout 10 --max-time 300 "$QUILIBRIUM_RELEASES/$file" > "$file"; then
                     error_message "Failed to download $file"
-                    rm -f "$file"
+                    rm -f "$file" # Cleanup failed download
                     continue
                 fi
                 
+                # Make binary executable if it's not a signature or digest file
                 if [[ ! $file =~ \.(dgst|sig)$ ]]; then
                     if ! chmod +x "$file"; then
                         error_message "Failed to make $file executable"
@@ -508,6 +484,7 @@ download_latest_qclient() {
             fi
         done
 
+        # Update QCLIENT_EXEC to point to the new binary
         QCLIENT_EXEC=$(find "$QCLIENT_DIR" -maxdepth 1 -type f -name "qclient-*" ! -name "*.dgst*" ! -name "*.sig*" ! -name "*Zone.Identifier*" | sort -V | tail -n 1)
 
         if [ -n "$QCLIENT_EXEC" ]; then
@@ -524,17 +501,18 @@ download_latest_qclient() {
     fi
 }
 
+# Function to check if wallets are encrypted and handle decryption if needed
 check_wallet_encryption() {
     if [ ! -d "$WALLETS_DIR" ] && [ -f "$QCLIENT_DIR/wallets.zip" ]; then
         echo
         echo "Your wallets are encrypted."
         read -s -p "Password: " password
-        echo
+        echo  # New line after hidden password input
         
         if unzip -qq -P "$password" "$QCLIENT_DIR/wallets.zip" -d "$QCLIENT_DIR"; then
             if [ -d "$WALLETS_DIR" ]; then
                 rm "$QCLIENT_DIR/wallets.zip"
-                return 0
+                return 0  # Decryption successful
             else
                 error_message "Decryption failed"
                 return 1
@@ -544,22 +522,38 @@ check_wallet_encryption() {
             return 1
         fi
     fi
-    return 0
+    return 0  # Wallets are not encrypted
 }
 
 check_existing_wallets() {
     if [ -d "$WALLETS_DIR" ]; then
+        # Look for any directory containing .config folder
         if find "$WALLETS_DIR" -mindepth 2 -maxdepth 2 -type d -name ".config" | grep -q .; then
-            return 0
+            return 0 # Found existing wallet(s)
         fi
     fi
-    return 1
+    return 1 # No existing wallets found
 }
 
 #=====================
-# Menu Functions
+# Menu functions
 #=====================
 
+prompt_return_to_menu() {
+    echo
+    while true; do
+    echo
+    echo "----------------------------------------"
+        read -rp "Go back to Q1 Wallet menu? (y/n): " choice
+        case $choice in
+            [Yy]* ) return 0 ;;  # Return true (0) to continue the loop
+            [Nn]* ) return 1 ;;  # Return false (1) to break the loop
+            * ) echo "Please answer Y or N." ;;
+        esac
+    done
+}
+
+# Handle "press any key" prompts
 press_any_key() {
     echo
     read -n 1 -s -r -p "Press any key to continue..."
@@ -567,30 +561,8 @@ press_any_key() {
     display_menu
 }
 
-check_coins() {
-    if ! check_wallet_encryption; then
-        return 1
-    fi
-    echo
-    echo "$(format_title "Individual coins")"
-    echo
-    tput sc
-    echo "Loading your coins..."
-    tput rc
-    
-    # Cross-platform date handling
-    if [[ "$OSTYPE" == "darwin"* ]]; then
-        output=$($QCLIENT_EXEC token coins metadata $FLAGS | sort -n -k 5 -r)
-    else
-        output=$($QCLIENT_EXEC token coins metadata $FLAGS | sort -n -k 5 -r)
-    fi
-    
-    tput el
-    echo "$output"
-    echo
-}
-
 check_balance() {
+    # First check if wallets are encrypted
     if ! check_wallet_encryption; then
         return 1
     fi
@@ -601,7 +573,27 @@ check_balance() {
     echo
 }
 
+check_coins() {
+    # First check if wallets are encrypted
+    if ! check_wallet_encryption; then
+        return 1
+    fi
+   echo
+   echo "$(format_title "Individual coins")"
+   echo
+   tput sc  # Save cursor position
+   echo "Loading your coins..."
+   tput rc  # Restore cursor position
+   
+   output=$($QCLIENT_EXEC token coins metadata $FLAGS | awk '{gsub("Timestamp ", ""); frame=$(NF-2); ts=$NF; gsub("T", " ", ts); gsub("+01:00", "", ts); cmd="date -d \""ts"\" \"+%d/%m/%Y %H.%M.%S\" 2>/dev/null"; cmd | getline newts; close(cmd); $(NF)=newts; print frame, $0}' | sort -k1,1nr | cut -d' ' -f2- | awk -F'Frame ' '{num=substr($2,1,index($2,",")-1); print num"|"$0}' | sort -t'|' -k1nr | cut -d'|' -f2-)
+   
+   tput el  # Clear line
+   echo "$output"
+   echo
+}
+
 create_transaction() {
+    # First check if wallets are encrypted
     if ! check_wallet_encryption; then
         show_error_and_confirm "Wallet encryption check failed"
         return 1
@@ -622,6 +614,7 @@ create_transaction() {
         return 1
     fi
 
+    # Get and validate recipient address
     while true; do
         echo
         read -p "Enter the recipient's account address (or 'e' to exit): " to_address
@@ -641,12 +634,14 @@ create_transaction() {
         fi
     done
 
+    # Show current coins
     echo
     echo "Your current coins before transaction:"
     echo "--------------------------------------"
     check_coins
     echo
     
+    # Get and validate coin ID
     while true; do
         read -p "Enter the coin ID to transfer (or 'e' to exit): " coin_id
         if [[ "$coin_id" == "e" ]]; then
@@ -665,6 +660,7 @@ create_transaction() {
         fi
     done
 
+    # Construct and show command
     cmd="$QCLIENT_EXEC token transfer $to_address $coin_id $FLAGS"
     echo
     echo "Transaction Details:"
@@ -707,7 +703,212 @@ create_transaction() {
     fi
 }
 
+# NOT USED
+# This one has both amount or ofcoin options, needs to be corrected
+create_transaction_qclient_2.1.x() {
+    # First check if wallets are encrypted
+    if ! check_wallet_encryption; then
+        return 1
+    fi
+    echo "$(format_title "Create transaction")"
+    description="This will transfer a coin to another address.
+
+IMPORTANT:
+- Make sure the recipient address is correct - this operation cannot be undone
+- The account address is different from the node peerID
+- Account addresses and coin IDs have the same format - don't send to a coin address"
+
+    # Get and validate recipient address
+    while true; do
+        read -p "Enter the recipient's address: " to_address
+        check_exit "$to_address" && return 1
+        if validate_hash "$to_address"; then
+            break
+        else
+            error_message "Invalid address format. Address must start with '0x' followed by 64 hexadecimal characters."
+            echo "Example: 0x7fe21cc8205c9031943daf4797307871fbf9ffe0851781acc694636d92712345"
+            echo
+        fi
+    done
+
+    # Get amount or coin ID
+    echo
+    echo "How would you like to make the transfer?"
+    echo "1) Transfer a specific amount - not available yet in the current Qclient version!"
+    echo "2) Transfer a specific coin"
+    read -p "Enter your choice (only 2 is available): " transfer_type
+
+    if [[ $transfer_type == "1" ]]; then
+        while true; do
+            echo
+            read -p "Enter the QUIL amount to transfer (format 0.000000): " amount
+            check_exit "$amount" && return 1
+            # Validate amount is a positive number
+            if [[ ! $amount =~ ^[0-9]*\.?[0-9]+$ ]] || [[ $(echo "$amount <= 0" | bc -l) -eq 1 ]]; then
+                error_message "Invalid amount. Please enter a positive number."
+                continue
+            fi
+            transfer_param="$amount"
+            break
+        done
+    elif [[ $transfer_type == "2" ]]; then
+        while true; do
+            # Show current coins before transaction
+            echo "Your current coins before transaction:"
+            echo "--------------------------------------"
+            check_coins
+            echo
+            read -p "Enter the coin ID to transfer: " coin_id
+            check_exit "$coin_id" && return 1
+            if validate_hash "$coin_id"; then
+                break
+            else
+                error_message "Invalid coin ID format. ID must start with '0x' followed by 64 hexadecimal characters."
+                echo "Example: 0x1148092cdce78c721835601ef39f9c2cd8b48b7787cbea032dd3913a4106a58d"
+                echo
+            fi
+        done
+        transfer_param="$coin_id"
+    else
+        error_message "Invalid option. Aborting transaction creation."
+        return
+    fi
+
+    # Construct the command
+    cmd="$QCLIENT_EXEC token transfer $to_address $transfer_param $FLAGS"
+
+    # Show transaction details for confirmation
+    echo
+    echo "Transaction Details:"
+    echo "--------------------"
+    echo "Recipient: $to_address"
+    if [[ $transfer_type == "1" ]]; then
+        echo "Amount: $amount QUIL"
+    else
+        echo "Coin ID: $coin_id"
+    fi
+    echo
+    echo "Command that will be executed:"
+    echo "$cmd"
+    echo
+
+    # Ask for confirmation
+    read -p "Do you want to proceed with this transaction? (y/n): " confirm
+
+    if [[ ${confirm,,} == "y" ]]; then
+        eval "$cmd"
+        echo
+        echo "Currently there is no transaction ID, and the receiver does not have to accept the transaction."
+        echo "Unless you received an error, your transaction should be already on its way to the receiver."
+        
+        # Show updated coins after transaction
+        echo
+        wait_with_spinner "Showing your coins in %s secs..." 30
+        echo
+        echo "Your coins after transaction:"
+        echo "-----------------------------"
+        check_coins
+        echo
+        echo "If you don't see the changes yet, wait a moment and check your coins again from the main menu."
+        echo "If still nothing changes, you may want to try to execute the operation again."
+    else
+        error_message "Transaction cancelled."
+    fi
+}
+
+# NOT USED
+token_split() {
+    # First check if wallets are encrypted
+    if ! check_wallet_encryption; then
+        return 1
+    fi
+    description="This will split a coin into two new coins with specified amounts"
+
+    if ! confirm_proceed "Split Coins" "$description"; then
+        return 1
+    fi
+    
+    # Show current coins
+    echo
+    echo "Your current coins before splitting:"
+    echo "------------------------------------"
+    check_coins
+    echo "Please select one of the above coins to split."
+    echo
+
+    # Get and validate the coin ID to split
+    while true; do
+        read -p "Enter the coin ID to split: " coin_id
+        check_exit "$coin_id" && return 1
+        if validate_hash "$coin_id"; then
+            break
+        else
+            error_message "Invalid coin ID format. ID must start with '0x' followed by 64 hexadecimal characters."
+            echo "Example: 0x1148092cdce78c721835601ef39f9c2cd8b48b7787cbea032dd3913a4106a58d"
+            echo
+        fi
+    done
+
+    # Get and validate the first amount
+    while true; do
+        echo
+        warning_message "The 2 splitted amounts must add up exactly to the coin original amount."
+        echo
+        read -p "Enter the amount for the first coin  (format 0.000000): " left_amount
+        check_exit "$left_amount" && return 1
+        if [[ ! $left_amount =~ ^[0-9]*\.?[0-9]+$ ]] || [[ $(echo "$left_amount <= 0" | bc -l) -eq 1 ]]; then
+            error_message "Invalid amount. Please enter a positive number."
+            continue
+        fi
+        break
+    done
+
+    # Get and validate the second amount
+    while true; do
+        read -p "Enter the amount for the second coin  (format 0.000000): " right_amount
+        check_exit "$right_amount" && return 1
+        if [[ ! $right_amount =~ ^[0-9]*\.?[0-9]+$ ]] || [[ $(echo "$right_amount <= 0" | bc -l) -eq 1 ]]; then
+            error_message "Invalid amount. Please enter a positive number."
+            continue
+        fi
+        break
+    done
+
+    # Show split details for confirmation
+    echo
+    echo "Split Details:"
+    echo "--------------"
+    echo "Original Coin: $coin_id"
+    echo "First Amount: $left_amount QUIL"
+    echo "Second Amount: $right_amount QUIL"
+    echo
+    echo "Command that will be executed:"
+    echo "$QCLIENT_EXEC token split $coin_id $left_amount $right_amount $FLAGS"
+    echo
+
+    # Ask for confirmation
+    read -p "Do you want to proceed with this split? (y/n): " confirm
+
+    if [[ ${confirm,,} == "y" ]]; then
+        $QCLIENT_EXEC token split "$coin_id" "$left_amount" "$right_amount" $FLAGS
+        
+        # Show updated coins after split
+        echo
+        wait_with_spinner "Showing your coins in %s secs..." 30
+        echo
+        echo "Your coins after splitting:"
+        echo "---------------------------"
+        check_coins
+        echo
+        echo "If you don't see the changes yet, wait a moment and check your coins again from the main menu."
+        echo "If still nothing changes, you may want to try to execute the operation again."
+    else
+        error_message "Split operation cancelled."
+    fi
+}
+
 token_split_advanced() {
+    # First check if wallets are encrypted
     if ! check_wallet_encryption; then
         show_error_and_confirm "Wallet encryption check failed"
         return 1
@@ -718,6 +919,7 @@ token_split_advanced() {
     echo "This will split a coin into multiple new coins (up to 50) using different methods"
     echo
 
+    # Show split options in a loop until valid choice
     while true; do
         echo
         echo "Choose split method:"
@@ -733,7 +935,7 @@ token_split_advanced() {
                 main
                 return 1
                 ;;
-            [1-3])
+            [1-3])  # Valid choice, break the loop
                 break
                 ;;
             *)  
@@ -743,12 +945,14 @@ token_split_advanced() {
         esac
     done
 
+    # Show coins and get coin selection
     echo
     echo "Your current coins:"
     echo "-----------------"
     check_coins
     echo
 
+    # Get and validate the coin ID to split
     while true; do
         read -p "Enter the coin ID to split (or 'e' to exit): " coin_id
         if [[ "$coin_id" == "e" ]]; then
@@ -765,6 +969,7 @@ token_split_advanced() {
         fi
     done
 
+    # Get the coin amount for the selected coin
     coin_info=$($QCLIENT_EXEC token coins $FLAGS | grep "$coin_id")
     if [[ $coin_info =~ ([0-9]+\.[0-9]+)\ QUIL ]]; then
         total_amount=${BASH_REMATCH[1]}
@@ -777,6 +982,7 @@ token_split_advanced() {
     echo "Selected coin amount: $total_amount QUIL"
     echo
 
+    # Function to format decimal number with leading zero and trim trailing zeros
     format_decimal() {
         local num="$1"
         if [[ $num =~ ^\..*$ ]]; then
@@ -786,7 +992,7 @@ token_split_advanced() {
     }
 
     case $split_method in
-        1)
+        1)  # Custom amounts
             while true; do
                 echo
                 echo "Enter amounts separated by comma (up to 100 values, must sum to $total_amount)"
@@ -806,6 +1012,7 @@ token_split_advanced() {
                     continue
                 fi
                 
+                # Calculate sum with full precision
                 sum=0
                 valid=true
                 for amount in "${amounts[@]}"; do
@@ -821,8 +1028,10 @@ token_split_advanced() {
                     continue
                 fi
                 
+                # Compare with total amount (allowing for small rounding differences)
                 diff=$(echo "scale=12; ($sum - $total_amount)^2 < 0.000000000001" | bc)
                 if [ "$diff" -eq 1 ]; then
+                    # Format amounts
                     formatted_amounts=()
                     for amount in "${amounts[@]}"; do
                         formatted_amounts+=($(format_decimal "$amount"))
@@ -836,7 +1045,7 @@ token_split_advanced() {
             done
             ;;
             
-        2)
+        2)  # Equal amounts
             while true; do
                 echo
                 read -p "Enter number of parts to split into (2-100 or 'e' to exit): " num_parts
@@ -850,23 +1059,27 @@ token_split_advanced() {
                     continue
                 fi
                 
+                # Calculate base amount with full precision
                 base_amount=$(echo "scale=12; $total_amount / $num_parts" | bc)
                 
+                # Generate array of amounts
                 amounts=()
                 remaining=$total_amount
                 
+                # For all parts except the last one
                 for ((i=1; i<num_parts; i++)); do
                     current_amount=$(format_decimal "$base_amount")
                     amounts+=("$current_amount")
                     remaining=$(echo "scale=12; $remaining - $current_amount" | bc)
                 done
                 
+                # Last amount is the remaining value
                 amounts+=($(format_decimal "$remaining"))
                 break
             done
             ;;
             
-        3)
+        3)  # Percentage split
             while true; do
                 echo
                 echo "Enter percentages separated by comma (must sum to 100)"
@@ -886,6 +1099,7 @@ token_split_advanced() {
                     continue
                 fi
                 
+                # Calculate sum of percentages
                 sum=0
                 valid=true
                 for pct in "${percentages[@]}"; do
@@ -901,8 +1115,10 @@ token_split_advanced() {
                     continue
                 fi
                 
+                # Check if percentages sum to 100
                 diff=$(echo "scale=12; ($sum - 100)^2 < 0.000000000001" | bc)
                 if [ "$diff" -eq 1 ]; then
+                    # Convert percentages to amounts
                     amounts=()
                     remaining=$total_amount
                     for ((i=0; i<${#percentages[@]}-1; i++)); do
@@ -921,12 +1137,14 @@ token_split_advanced() {
             ;;
     esac
 
+    # Construct command with all amounts
     cmd="$QCLIENT_EXEC token split $coin_id"
     for amount in "${amounts[@]}"; do
         cmd="$cmd $amount"
     done
     cmd="$cmd $FLAGS"
 
+    # Show split details for confirmation
     echo
     echo "Split Details:"
     echo "--------------"
@@ -949,6 +1167,8 @@ token_split_advanced() {
             return 1
         fi
         
+        # Show updated coins after split
+        echo
         if ! wait_with_spinner "Showing your coins in %s secs..." 30; then
             show_error_and_confirm "Failed to update coin display"
             return 1
@@ -970,6 +1190,7 @@ token_split_advanced() {
 }
 
 token_merge() {
+    # First check if wallets are encrypted
     if ! check_wallet_encryption; then
         show_error_and_confirm "Wallet encryption check failed"
         return 1
@@ -985,6 +1206,7 @@ token_merge() {
         return 1
     fi
     
+    # Display merge options in a loop until valid choice or exit
     while true; do
         echo
         echo "Choose merge option:"
@@ -999,7 +1221,7 @@ token_merge() {
                 main
                 return 1
                 ;;
-            1|2)
+            1|2)  # Valid choice, break the loop
                 break
                 ;;
             *)  
@@ -1009,6 +1231,7 @@ token_merge() {
         esac
     done
 
+    # Process based on choice
     if [ "$merge_choice" = "1" ]; then
         echo
         echo "Your current coins before merging:"
@@ -1017,6 +1240,7 @@ token_merge() {
         echo "$coins_output"
         echo
 
+        # Count coins by counting lines containing "QUIL"
         coin_count=$(echo "$coins_output" | grep -c "QUIL")
 
         if [ "$coin_count" -lt 2 ]; then
@@ -1024,6 +1248,7 @@ token_merge() {
             return 1
         fi
         
+        # Get and validate the first coin ID
         while true; do
             read -p "Enter the first coin ID (or 'e' to exit): " left_coin
             if [[ "$left_coin" == "e" ]]; then
@@ -1040,6 +1265,7 @@ token_merge() {
             fi
         done
 
+        # Get and validate the second coin ID
         while true; do
             read -p "Enter the second coin ID (or 'e' to exit): " right_coin
             if [[ "$right_coin" == "e" ]]; then
@@ -1056,6 +1282,7 @@ token_merge() {
             fi
         done
 
+        # Show merge details and confirm
         echo
         echo "Merge Details:"
         echo "--------------"
@@ -1078,7 +1305,8 @@ token_merge() {
             return 1
         fi
 
-    else
+    else  # merge_choice = 2
+        # Verify we have enough coins to merge
         coin_count=$($QCLIENT_EXEC token coins $FLAGS | grep -c "QUIL")
         
         if [ "$coin_count" -lt 2 ]; then
@@ -1086,6 +1314,7 @@ token_merge() {
             return 1
         fi
 
+        # Show command and confirm
         echo "Command that will be executed:"
         echo "$QCLIENT_EXEC token merge all $FLAGS"
         echo
@@ -1103,6 +1332,7 @@ token_merge() {
         fi
     fi
 
+    # Only show updated coins if merge was successful
     echo
     if ! wait_with_spinner "Showing your coins in %s secs..." 30; then
         show_error_and_confirm "Failed to update coin display"
@@ -1119,7 +1349,149 @@ token_merge() {
     return 0
 }
 
+# NOT USED
+token_merge_simple() {
+    # First check if wallets are encrypted
+    if ! check_wallet_encryption; then
+        return 1
+    fi
+    description="This will merge two coins into a single new coin"
+
+    if ! confirm_proceed "Merge Coins" "$description"; then
+        return 1
+    fi
+    
+    # Show current coins
+    echo
+    echo "Your current coins before merging:"
+    echo "----------------------------------"
+    check_coins
+    echo "Please select two of the above coins to merge."
+    echo
+    
+    # Get and validate the first coin ID
+    while true; do
+        read -p "Enter the first coin ID: " left_coin
+        check_exit "$left_coin" && return 1
+        if validate_hash "$left_coin"; then
+            break
+        else
+            error_message "Invalid coin ID format. ID must start with '0x' followed by 64 hexadecimal characters."
+            echo "Example: 0x1148092cdce78c721835601ef39f9c2cd8b48b7787cbea032dd3913a4106a58d"
+            echo
+        fi
+    done
+
+    # Get and validate the second coin ID
+    while true; do
+        read -p "Enter the second coin ID: " right_coin
+        check_exit "$right_coin" && return 1
+        if validate_hash "$right_coin"; then
+            break
+        else
+            error_message "Invalid coin ID format. ID must start with '0x' followed by 64 hexadecimal characters."
+            echo "Example: 0x0140e01731256793bba03914f3844d645fbece26553acdea8ac4de4d84f91690"
+            echo
+        fi
+    done
+
+    # Show merge details for confirmation
+    echo
+    echo "Merge Details:"
+    echo "--------------"
+    echo "First Coin: $left_coin"
+    echo "Second Coin: $right_coin"
+    echo
+    echo "Command that will be executed:"
+    echo "$QCLIENT_EXEC token merge $left_coin $right_coin $FLAGS"
+    echo
+
+    # Ask for confirmation
+    read -p "Do you want to proceed with this merge? (y/n): " confirm
+
+    if [[ ${confirm,,} == "y" ]]; then
+        $QCLIENT_EXEC token merge "$left_coin" "$right_coin" $FLAGS
+        
+        # Show updated coins after merge
+        echo
+        wait_with_spinner "Showing your coins in %s secs..." 30
+        echo
+        echo "Your coins after merging:"
+        echo "-------------------------"
+        check_coins
+        echo
+        echo "If you don't see the changes yet, wait a moment and check your coins again from the main menu."
+        echo "If still nothing changes, you may want to try to execute the operation again."
+    else
+        error_message "Merge operation cancelled."
+    fi
+}
+
+# NOT USED
+token_merge_all() {
+    # First check if wallets are encrypted
+    if ! check_wallet_encryption; then
+        return 1
+    fi
+    description="This will merge all your coins into a single coin."
+
+    if ! confirm_proceed "Merge All Coins" "$description"; then
+        return 1
+    fi
+
+    echo "Current coins that will be merged:"
+    echo "---------------------------------"
+    coins_output=$($QCLIENT_EXEC token coins $FLAGS)
+    echo "$coins_output"
+    echo
+
+    # Count coins by counting lines containing "QUIL"
+    coin_count=$(echo "$coins_output" | grep -c "QUIL")
+
+    if [ "$coin_count" -lt 2 ]; then
+        error_message "Not enough coins to merge. You need at least 2 coins."
+        echo
+        read -p "Press Enter to return to the main menu..."
+        return 1
+    fi
+
+    # Extract coin values and calculate total
+    total_value=0
+    while read -r line; do
+        if [[ $line =~ ([0-9]+\.[0-9]+)\ QUIL ]]; then
+            value=${BASH_REMATCH[1]}
+            total_value=$(echo "$total_value + $value" | bc)
+        fi
+    done <<< "$coins_output"
+
+    echo "Found $coin_count coins to merge"
+    echo "Total amount in QUIL will be $total_value"
+    echo
+
+    # Ask for confirmation
+    read -p "Do you want to proceed? (y/n): " confirm
+    if [[ ${confirm,,} != "y" ]]; then
+        error_message "Operation cancelled."
+        return 1
+    fi
+
+    echo
+    $QCLIENT_EXEC token merge all $FLAGS
+
+    # Show updated coins after merge
+    echo
+    wait_with_spinner "Showing your coins in %s secs..." 30
+    echo
+    echo "Your coins after merging:"
+    echo "-------------------------"
+    check_coins
+    echo
+    echo "If you don't see the changes yet, wait a moment and check your coins again from the main menu."
+    echo "If still nothing changes, you may want to try to execute the operation again."
+}
+
 create_new_wallet() {
+    # First check if wallets are encrypted
     if ! check_wallet_encryption; then
         show_error_and_confirm "Wallet encryption check failed"
         return 1
@@ -1138,21 +1510,25 @@ create_new_wallet() {
             return 1
         fi
         
+        # Validate wallet name (allowing letters, numbers, dashes, and underscores)
         if [[ ! "$new_wallet" =~ ^[a-z0-9_-]+$ ]]; then
             error_message "Invalid wallet name. Use only lowercase letters, numbers, dashes (-) and underscores (_)"
             continue
         fi
         
+        # Check if wallet already exists
         if [ -d "$WALLETS_DIR/$new_wallet" ]; then
             error_message "Wallet '$new_wallet' already exists"
             continue
         fi
         
+        # Create new wallet directory structure
         if ! mkdir -p "$WALLETS_DIR/$new_wallet/.config"; then
             show_error_and_confirm "Failed to create wallet directory"
             return 1
         fi
         
+        # Update current wallet
         WALLET_NAME="$new_wallet"
         if ! echo "$WALLET_NAME" > "$CURRENT_WALLET_FILE"; then
             show_error_and_confirm "Failed to update current wallet file"
@@ -1166,6 +1542,7 @@ create_new_wallet() {
         echo "✅ Switched to new wallet"
         echo
         
+        # Check if balance command works with new wallet
         if ! check_balance; then
             show_error_and_confirm "Wallet created but balance check failed"
             return 1
@@ -1179,6 +1556,7 @@ create_new_wallet() {
 }
 
 switch_wallet() {
+    # First check if wallets are encrypted
     if ! check_wallet_encryption; then
         show_error_and_confirm "Wallet encryption check failed"
         return 1
@@ -1188,11 +1566,13 @@ switch_wallet() {
     echo "$(format_title "Switch Wallet")"
     echo
     
+    # List available wallets
     if [ ! -d "$WALLETS_DIR" ]; then
         show_error_and_confirm "No wallets directory found"
         return 1
     fi
     
+    # Only list directories that contain .config
     wallets=()
     while IFS= read -r dir; do
         if [ -d "$dir/.config" ]; then
@@ -1226,6 +1606,7 @@ switch_wallet() {
             return 1
         fi
         
+        # Validate input
         if ! [[ "$selection" =~ ^[0-9]+$ ]] || \
            [ "$selection" -lt 1 ] || \
            [ "$selection" -gt ${#wallets[@]} ]; then
@@ -1233,13 +1614,16 @@ switch_wallet() {
             continue
         fi
         
+        # Get selected wallet name
         new_wallet="${wallets[$((selection-1))]}"
         
+        # Check if trying to switch to current wallet
         if [ "$new_wallet" == "$WALLET_NAME" ]; then
             error_message "Already using this wallet"
             continue
         fi
         
+        # Switch wallet
         WALLET_NAME="$new_wallet"
         if ! echo "$WALLET_NAME" > "$CURRENT_WALLET_FILE"; then
             show_error_and_confirm "Failed to update current wallet file"
@@ -1252,12 +1636,14 @@ switch_wallet() {
         echo "✅ Switched to wallet: $new_wallet"
         echo
         
+        # Back to menu
         main
         return 0
     done
 }
 
 delete_wallet() {
+    # First check if wallets are encrypted
     if ! check_wallet_encryption; then
         show_error_and_confirm "Wallet encryption check failed"
         return 1
@@ -1270,11 +1656,13 @@ delete_wallet() {
         return 1
     fi
     
+    # List available wallets
     if [ ! -d "$WALLETS_DIR" ]; then
         show_error_and_confirm "No wallets directory found"
         return 1
     fi
     
+    # Only list directories that contain .config
     wallets=()
     while IFS= read -r dir; do
         if [ -d "$dir/.config" ]; then
@@ -1309,6 +1697,7 @@ delete_wallet() {
             return 1
         fi
         
+        # Validate input
         if ! [[ "$selection" =~ ^[0-9]+$ ]] || \
            [ "$selection" -lt 1 ] || \
            [ "$selection" -gt ${#wallets[@]} ]; then
@@ -1316,8 +1705,10 @@ delete_wallet() {
             continue
         fi
         
+        # Get selected wallet name
         selected_wallet="${wallets[$((selection-1))]}"
         
+        # Prevent deletion of current wallet
         if [ "$selected_wallet" == "$WALLET_NAME" ]; then
             error_message "Cannot delete the currently active wallet. Please switch to a different wallet first"
             continue
@@ -1329,11 +1720,13 @@ delete_wallet() {
         read -p "Are you absolutely sure you want to delete this wallet? (y/n): " confirm
         
         if [[ ${confirm,,} == "y" ]]; then
+            # Double confirmation for safety
             echo
             echo "Final confirmation required."
             read -p "Type the wallet name '$selected_wallet' to confirm deletion: " confirmation
             
             if [[ "$confirmation" == "$selected_wallet" ]]; then
+                # Proceed with deletion
                 if rm -rf "$WALLETS_DIR/$selected_wallet"; then
                     echo
                     echo "✅ Wallet '$selected_wallet' has been deleted."
@@ -1355,7 +1748,9 @@ delete_wallet() {
 }
 
 encrypt_decrypt_wallets() {
+    # Check current state
     if [ -f "$QCLIENT_DIR/wallets.zip" ] && [ ! -d "$WALLETS_DIR" ]; then
+        # Encrypted state: only offer decrypt option
         echo
         echo "$(format_title "Wallet Encryption")"
         echo "This will decrypt your wallet files using your password."
@@ -1369,7 +1764,7 @@ encrypt_decrypt_wallets() {
                 [Yy])
                     echo
                     read -s -p "Password: " password
-                    echo
+                    echo  # New line after hidden password input
                     
                     if ! unzip -qq -P "$password" "$QCLIENT_DIR/wallets.zip" -d "$QCLIENT_DIR"; then
                         error_message "Decryption failed - incorrect password"
@@ -1409,6 +1804,7 @@ encrypt_decrypt_wallets() {
         done
         
     elif [ -d "$WALLETS_DIR" ] && [ ! -f "$QCLIENT_DIR/wallets.zip" ]; then
+        # Unencrypted state: only offer encrypt option
         echo
         echo "$(format_title "Wallet Encryption")"
         echo "This will encrypt your wallet files to secure them with a password."
@@ -1429,9 +1825,10 @@ encrypt_decrypt_wallets() {
                         return 1
                     fi
                     
+                    # Create encrypted zip without showing the file list
                     if ! zip -qq -r -e wallets.zip wallets/; then
                         show_error_and_confirm "Encryption failed"
-                        rm -f wallets.zip
+                        rm -f wallets.zip  # Clean up if failed
                         return 1
                     fi
                     
@@ -1472,6 +1869,7 @@ encrypt_decrypt_wallets() {
         done
         
     else
+        # Invalid state (both or neither exist)
         if [ -f "$QCLIENT_DIR/wallets.zip" ] && [ -d "$WALLETS_DIR" ]; then
             show_error_and_confirm "Invalid state: Both encrypted and unencrypted wallets found.\nPlease manually remove either wallets.zip or the wallets directory"
             return 1
@@ -1480,6 +1878,31 @@ encrypt_decrypt_wallets() {
             return 1
         fi
     fi
+}
+
+# NOT USED
+count_coins() {
+    echo
+    echo "$(format_title "Count Coins")"
+    
+    # Run the coins command and capture output silently
+    coins_output=$($QCLIENT_EXEC token coins $FLAGS)
+    
+    # Count coins by counting lines containing "QUIL"
+    coin_count=$(echo "$coins_output" | grep -c "QUIL")
+    
+    # Calculate total value
+    total_value=0
+    while read -r line; do
+        if [[ $line =~ ([0-9]+\.[0-9]+)\ QUIL ]]; then
+            value=${BASH_REMATCH[1]}
+            total_value=$(echo "$total_value + $value" | bc)
+        fi
+    done <<< "$coins_output"
+    
+    echo "You currently have $coin_count coins"
+    echo "Total value: $total_value QUIL"
+    echo
 }
 
 help() {
@@ -1584,13 +2007,25 @@ Use this script at your own risk and always verify transactions before confirmin
 '
 }
 
+
+#=====================
+# Check for updates
+#=====================
+
 check_for_updates() {
-    local GITHUB_RAW_URL="https://raw.githubusercontent.com/lamat1111/Q1-Wallet/main/test/linux-macOS/menu.sh"
-    local SCRIPT_PATH="$QCLIENT_DIR/menu.sh"
+    # Check if curl is available
+    if ! command -v curl &> /dev/null; then
+        return 1
+    fi
+
+    local GITHUB_RAW_URL="https://raw.githubusercontent.com/lamat1111/Q1-Wallet/main/menu.sh"
+    local SCRIPT_PATH="$QCLIENT_DIR/menu.sh"  # Use QCLIENT_DIR which is already defined as $(pwd)
     local LATEST_VERSION
     
+    # Fetch and extract the latest version from GitHub
     LATEST_VERSION=$(curl -sS "$GITHUB_RAW_URL" | sed -n 's/^SCRIPT_VERSION="\(.*\)"$/\1/p')
     
+    # Check if version fetch was successful
     if [ $? -ne 0 ] || [ -z "$LATEST_VERSION" ]; then
         return 1
     fi
@@ -1599,11 +2034,13 @@ check_for_updates() {
     echo "Current local version: $SCRIPT_VERSION"
     echo "Latest remote version: $LATEST_VERSION"
     
+    # Version comparison
     if version_gt "$LATEST_VERSION" "$SCRIPT_VERSION"; then
         echo
         warning_message "A new version is available!"
         echo
         
+        # Download and replace the script
         if curl -sS -o "${SCRIPT_PATH}.tmp" "$GITHUB_RAW_URL"; then
             chmod +x "${SCRIPT_PATH}.tmp"
             mv "${SCRIPT_PATH}.tmp" "$SCRIPT_PATH"
@@ -1611,10 +2048,10 @@ check_for_updates() {
             echo
             echo "Restarting script in 3 seconds..."
             sleep 3
-            exec "$SCRIPT_PATH"
+            exec "$SCRIPT_PATH"  # Restart the script
         else
             error_message "Update failed"
-            rm -f "${SCRIPT_PATH}.tmp"
+            rm -f "${SCRIPT_PATH}.tmp"  # Clean up failed download
             return 1
         fi
         return 2
@@ -1625,6 +2062,7 @@ check_for_updates() {
         return 0
     fi
 }
+
 
 #=====================
 # Main Menu Loop
@@ -1639,6 +2077,9 @@ main() {
         case $choice in
             1) check_balance; press_any_key ;;
             2) create_transaction; press_any_key ;;
+            3) accept_transaction; press_any_key ;;
+            4) reject_transaction; press_any_key ;;
+            5) mutual_transfer; press_any_key ;;
             6) check_coins; press_any_key ;;
             7) token_merge; press_any_key ;;
             8) token_split_advanced; press_any_key ;;
@@ -1649,6 +2090,7 @@ main() {
             14) delete_wallet; press_any_key ;;
             [uU]) check_qclient_version; press_any_key ;;
             [sS]) security_settings; press_any_key ;;
+            [bB]) best_providers; press_any_key ;;
             [dD]) donations; press_any_key ;;
             [xX]) disclaimer; press_any_key ;;
             [hH]) help; press_any_key ;;
@@ -1658,11 +2100,13 @@ main() {
     done
 }
 
+
 #=====================
 # Run
 #=====================
 
-check_and_install_deps
 check_qclient_binary
 check_for_updates
+#add_alias_if_needed
+
 main
