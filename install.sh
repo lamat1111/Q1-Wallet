@@ -20,7 +20,7 @@
 SCRIPT_VERSION=1.1.5
 INSTALL_DIR="$HOME/q1wallet"
 SYMLINK_PATH="/usr/local/bin/q1wallet"
-MENU_SCRIPT_URL="https://raw.githubusercontent.com/lamat1111/Q1-Wallet/main/test/linux-macOS/menu.sh"
+MENU_SCRIPT_URL="https://raw.githubusercontent.com/lamat1111/Q1-Wallet/main/menu.sh"
 
 # Color definitions (platform-agnostic)
 RED='\033[1;31m'
