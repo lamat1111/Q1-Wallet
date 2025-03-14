@@ -17,6 +17,8 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 # =============================================================================
 
+# LINUX ONLY
+
 SCRIPT_VERSION="1.2.3"
 
 # Color definitions (platform-agnostic)
