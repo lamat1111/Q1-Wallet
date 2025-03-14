@@ -298,61 +298,90 @@ handle_wallet_creation() {
 setup_symlink() {
     echo -e "\nQuick command setup"
     echo "-------------------"
-    echo "Create a 'q1wallet' quick command to call the menu."
-    echo "Requires sudo access to create the command in /usr/local/bin"
     
-    read -p "Would you like to set up the quick command? (y/n): " setup_cmd
-    if [[ ! $setup_cmd =~ ^[Yy]$ ]]; then
-        echo "Skipping quick command setup."
-        echo "You can still use the wallet by running: $INSTALL_DIR/menu.sh"
-        return 0
-    fi
-    
-    if [ -L "$SYMLINK_PATH" ]; then
-        current_target=$(readlink "$SYMLINK_PATH")
-        if [ "$current_target" = "$INSTALL_DIR/menu.sh" ]; then
-            success_message "Command 'q1wallet' is already set up correctly"
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        # macOS alias approach (from previous response)
+        echo "On macOS, this will add an alias to your shell profile"
+        read -p "Would you like to set up the quick command? (y/n): " setup_cmd
+        if [[ ! $setup_cmd =~ ^[Yy]$ ]]; then
+            echo "Skipping quick command setup."
+            echo "You can still use the wallet by running: $INSTALL_DIR/menu.sh"
             return 0
         fi
-    fi
-    
-    if ! check_sudo; then
-        error_message "Quick command creation requires sudo access"
-        echo "You can still use the wallet by running: $INSTALL_DIR/menu.sh"
- brilliant    return 1
-    fi
-    
-    if [ ! -d "/usr/local/bin" ]; then
-        echo "Creating /usr/local/bin directory..."
-        if ! sudo mkdir -p /usr/local/bin; then
-            error_message "Failed to create /usr/local/bin directory"
+        # ... rest of macOS alias code from previous response ...
+    else  # Linux and WSL
+        echo "Create a 'q1wallet' quick command to call the menu."
+        echo "Requires sudo access to create the command in /usr/local/bin"
+        read -p "Would you like to set up the quick command? (y/n): " setup_cmd
+        if [[ ! $setup_cmd =~ ^[Yy]$ ]]; then
+            echo "Skipping quick command setup."
+            echo "You can still use the wallet by running: $INSTALL_DIR/menu.sh"
+            return 0
+        fi
+
+        # Check if /usr/local/bin is in PATH
+        if ! echo "$PATH" | grep -q "/usr/local/bin"; then
+            warning_message "/usr/local/bin is not in your PATH"
+            echo "The quick command may not work until you add /usr/local/bin to your PATH"
+            echo "You can add it by including this in your ~/.bashrc or ~/.zshrc:"
+            echo "export PATH=\$PATH:/usr/local/bin"
+        fi
+
+        # Check existing symlink
+        if [ -L "$SYMLINK_PATH" ]; then
+            current_target=$(readlink "$SYMLINK_PATH")
+            if [ "$current_target" = "$INSTALL_DIR/menu.sh" ]; then
+                success_message "Command 'q1wallet' is already set up correctly"
+                return 0
+            else
+                echo "Existing symlink points to: $current_target"
+                read -p "Would you like to replace it? (y/n): " replace
+                if [[ ! $replace =~ ^[Yy]$ ]]; then
+                    echo "Skipping quick command setup."
+                    return 0
+                fi
+            fi
+        elif [ -e "$SYMLINK_PATH" ]; then
+            error_message "A file already exists at $SYMLINK_PATH"
+            echo "Please remove it manually and rerun the installer"
+            return 1
+        fi
+
+        # Ensure sudo access
+        if ! check_sudo; then
+            error_message "Quick command creation requires sudo access"
             echo "You can still use the wallet by running: $INSTALL_DIR/menu.sh"
             return 1
         fi
-    fi
-    
-    if [ -e "$SYMLINK_PATH" ] && [ ! -L "$SYMLINK_PATH" ]; then
-        error_message "A file already exists at $SYMLINK_PATH but is not a symlink"
-        echo "Please remove it manually and run the installer again"
-        return 1
-    fi
 
-    echo "Creating symlink to $INSTALL_DIR/menu.sh..."
-    if ! sudo ln -sf "$INSTALL_DIR/menu.sh" "$SYMLINK_PATH"; then
-        error_message "Failed to create quick command 'q1wallet'"
-        echo "You can still use the wallet by running: $INSTALL_DIR/menu.sh"
-        echo "To create the quick command later, run: sudo ln -sf $INSTALL_DIR/menu.sh $SYMLINK_PATH"
-        return 1
-    fi
+        # Create /usr/local/bin if it doesn't exist
+        if [ ! -d "/usr/local/bin" ]; then
+            echo "Creating /usr/local/bin directory..."
+            if ! sudo mkdir -p "/usr/local/bin"; then
+                error_message "Failed to create /usr/local/bin directory"
+                echo "You can still use the wallet by running: $INSTALL_DIR/menu.sh"
+                return 1
+            fi
+        fi
 
-    if [ -L "$SYMLINK_PATH" ]; then
-        success_message "Command 'q1wallet' installed successfully!"
-        echo "You can now run 'q1wallet' from anywhere"
-        return 0
-    else
-        error_message "Symlink creation appeared to succeed but link not found"
-        echo "You can still use the wallet by running: $INSTALL_DIR/menu.sh"
-        return 1
+        # Create the symlink
+        echo "Creating symlink to $INSTALL_DIR/menu.sh..."
+        if ! sudo ln -sf "$INSTALL_DIR/menu.sh" "$SYMLINK_PATH"; then
+            error_message "Failed to create quick command 'q1wallet'"
+            echo "You can still use the wallet by running: $INSTALL_DIR/menu.sh"
+            echo "To create the quick command later, run: sudo ln -sf $INSTALL_DIR/menu.sh $SYMLINK_PATH"
+            return 1
+        fi
+
+        if [ -L "$SYMLINK_PATH" ]; then
+            success_message "Command 'q1wallet' installed successfully!"
+            echo "You can now run 'q1wallet' from anywhere"
+            return 0
+        else
+            error_message "Symlink creation appeared to succeed but link not found"
+            echo "You can still use the wallet by running: $INSTALL_DIR/menu.sh"
+            return 1
+        fi
     fi
 }
 
