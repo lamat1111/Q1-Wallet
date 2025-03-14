@@ -300,15 +300,63 @@ setup_symlink() {
     echo "-------------------"
     
     if [[ "$OSTYPE" == "darwin"* ]]; then
-        # macOS alias approach (from previous response)
-        echo "On macOS, this will add an alias to your shell profile"
+        echo "On macOS, this will add an alias to your shell profile to call the menu."
         read -p "Would you like to set up the quick command? (y/n): " setup_cmd
         if [[ ! $setup_cmd =~ ^[Yy]$ ]]; then
             echo "Skipping quick command setup."
             echo "You can still use the wallet by running: $INSTALL_DIR/menu.sh"
             return 0
         fi
-        # ... rest of macOS alias code from previous response ...
+
+        # Detect shell and appropriate profile file
+        profile_file=""
+        case "$SHELL" in
+            */zsh)
+                profile_file="$HOME/.zprofile"
+                ;;
+            */bash)
+                profile_file="$HOME/.bash_profile"
+                ;;
+            *)
+                profile_file="$HOME/.profile"
+                ;;
+        esac
+
+        # Check if alias already exists
+        if grep -q "alias q1wallet=" "$profile_file" 2>/dev/null; then
+            current_alias=$(grep "alias q1wallet=" "$profile_file" | sed 's/alias q1wallet=//')
+            if [ "$current_alias" = "'$INSTALL_DIR/menu.sh'" ]; then
+                success_message "Command 'q1wallet' alias already exists and is set up correctly in $profile_file"
+                echo "You may need to restart your terminal or run 'source $profile_file'"
+                return 0
+            else
+                echo "Existing alias found in $profile_file points to: $current_alias"
+                read -p "Would you like to replace it? (y/n): " replace
+                if [[ ! $replace =~ ^[Yy]$ ]]; then
+                    echo "Skipping quick command setup."
+                    return 0
+                fi
+                # Remove existing alias
+                sed -i '' "/alias q1wallet=/d" "$profile_file"
+            fi
+        fi
+
+        # Add alias to profile file
+        echo "Adding alias to $profile_file..."
+        echo "# Q1 Wallet quick command" >> "$profile_file"
+        echo "alias q1wallet='$INSTALL_DIR/menu.sh'" >> "$profile_file"
+        
+        if [ $? -eq 0 ]; then
+            success_message "Command 'q1wallet' alias added successfully!"
+            echo "Please restart your terminal or run 'source $profile_file' to use the command"
+            return 0
+        else
+            error_message "Failed to add alias to $profile_file"
+            echo "You can still use the wallet by running: $INSTALL_DIR/menu.sh"
+            echo "Or manually add this to your $profile_file:"
+            echo "alias q1wallet='$INSTALL_DIR/menu.sh'"
+            return 1
+        fi
     else  # Linux and WSL
         echo "Create a 'q1wallet' quick command to call the menu."
         echo "Requires sudo access to create the command in /usr/local/bin"
@@ -329,7 +377,7 @@ setup_symlink() {
 
         # Check existing symlink
         if [ -L "$SYMLINK_PATH" ]; then
-            current_target=$(readlink "$SYMLINK_PATH")
+            current_target=$(readlink "$SYMLINK_PATH")  # Use readlink without -f for portability
             if [ "$current_target" = "$INSTALL_DIR/menu.sh" ]; then
                 success_message "Command 'q1wallet' is already set up correctly"
                 return 0
@@ -342,7 +390,7 @@ setup_symlink() {
                 fi
             fi
         elif [ -e "$SYMLINK_PATH" ]; then
-            error_message "A file already exists at $SYMLINK_PATH"
+            error_message "A file already exists at $SYMLINK_PATH but is not a symlink"
             echo "Please remove it manually and rerun the installer"
             return 1
         fi
@@ -364,7 +412,7 @@ setup_symlink() {
             fi
         fi
 
-        # Create the symlink
+        # Create or update the symlink
         echo "Creating symlink to $INSTALL_DIR/menu.sh..."
         if ! sudo ln -sf "$INSTALL_DIR/menu.sh" "$SYMLINK_PATH"; then
             error_message "Failed to create quick command 'q1wallet'"
@@ -373,6 +421,7 @@ setup_symlink() {
             return 1
         fi
 
+        # Verify the symlink was created
         if [ -L "$SYMLINK_PATH" ]; then
             success_message "Command 'q1wallet' installed successfully!"
             echo "You can now run 'q1wallet' from anywhere"
