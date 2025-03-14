@@ -580,9 +580,9 @@ check_coins() {
     
     # Cross-platform date handling
     if [[ "$OSTYPE" == "darwin"* ]]; then
-        output=$($QCLIENT_EXEC token coins metadata $FLAGS | awk '{gsub("Timestamp ", ""); frame=$(NF-2); ts=$NF; gsub("T", " ", ts); gsub("+01:00", "", ts); cmd="date -jf \"%Y-%m-%d %H:%M:%S\" \""ts"\" \"+%d/%m/%Y %H.%M.%S\" 2>/dev/null"; cmd | getline newts; close(cmd); $(NF)=newts; print frame, $0}' | sort -k1,1nr | cut -d' ' -f2- | awk -F'Frame ' '{num=substr($2,1,index($2,",")-1); print num"|"$0}' | sort -t'|' -k1nr | cut -d'|' -f2-)
+        output=$($QCLIENT_EXEC token coins metadata $FLAGS | sort -n -k 5 -r)
     else
-        output=$($QCLIENT_EXEC token coins metadata $FLAGS | awk '{gsub("Timestamp ", ""); frame=$(NF-2); ts=$NF; gsub("T", " ", ts); gsub("+01:00", "", ts); cmd="date -d \""ts"\" \"+%d/%m/%Y %H.%M.%S\" 2>/dev/null"; cmd | getline newts; close(cmd); $(NF)=newts; print frame, $0}' | sort -k1,1nr | cut -d' ' -f2- | awk -F'Frame ' '{num=substr($2,1,index($2,",")-1); print num"|"$0}' | sort -t'|' -k1nr | cut -d'|' -f2-)
+        output=$($QCLIENT_EXEC token coins metadata $FLAGS | sort -n -k 5 -r)
     fi
     
     tput el
