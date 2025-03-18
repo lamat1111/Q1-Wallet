@@ -37,6 +37,15 @@ QCLIENT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WALLETS_DIR="$QCLIENT_DIR/wallets"
 CURRENT_WALLET_FILE="$QCLIENT_DIR/.current_wallet"
 
+check_existing_wallets() {
+    if [ -d "$WALLETS_DIR" ]; then
+        if find "$WALLETS_DIR" -mindepth 2 -maxdepth 2 -type d -name ".config" | grep -q .; then
+            return 0
+        fi
+    fi
+    return 1
+}
+
 # Initialize current wallet (platform-agnostic)
 if [ -f "$CURRENT_WALLET_FILE" ]; then
     WALLET_NAME=$(cat "$CURRENT_WALLET_FILE")
@@ -166,15 +175,6 @@ E) Exit                      v $SCRIPT_VERSION"
 #=====================
 # Helper Functions (Mostly Platform-Agnostic)
 #=====================
-
-check_existing_wallets() {
-    if [ -d "$WALLETS_DIR" ]; then
-        if find "$WALLETS_DIR" -mindepth 2 -maxdepth 2 -type d -name ".config" | grep -q .; then
-            return 0
-        fi
-    fi
-    return 1
-}
 
 
 format_title() {
