@@ -18,7 +18,7 @@
 # =============================================================================
 
 
-SCRIPT_VERSION="1.2.4"
+SCRIPT_VERSION="1.2.5"
 
 # Color definitions (platform-agnostic)
 RED='\033[1;31m'
@@ -166,6 +166,16 @@ E) Exit                      v $SCRIPT_VERSION"
 #=====================
 # Helper Functions (Mostly Platform-Agnostic)
 #=====================
+
+check_existing_wallets() {
+    if [ -d "$WALLETS_DIR" ]; then
+        if find "$WALLETS_DIR" -mindepth 2 -maxdepth 2 -type d -name ".config" | grep -q .; then
+            return 0
+        fi
+    fi
+    return 1
+}
+
 
 format_title() {
     local title="$1"
@@ -548,14 +558,6 @@ check_wallet_encryption() {
     return 0
 }
 
-check_existing_wallets() {
-    if [ -d "$WALLETS_DIR" ]; then
-        if find "$WALLETS_DIR" -mindepth 2 -maxdepth 2 -type d -name ".config" | grep -q .; then
-            return 0
-        fi
-    fi
-    return 1
-}
 
 #=====================
 # Menu Functions
