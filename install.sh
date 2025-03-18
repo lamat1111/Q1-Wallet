@@ -17,7 +17,7 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 # =============================================================================
 
-SCRIPT_VERSION=1.1.6
+SCRIPT_VERSION=1.1.7
 INSTALL_DIR="$HOME/q1wallet"
 MENU_SCRIPT_URL="https://raw.githubusercontent.com/lamat1111/Q1-Wallet/main/menu.sh"
 
@@ -310,7 +310,7 @@ setup_alias() {
     profile_file=""
     case "$SHELL" in
         */zsh)
-            profile_file="$HOME/.zshrc"  # Zsh on both platforms
+            profile_file="$HOME/.zprofile"  # Use .zprofile for Zsh to avoid Oh My Zsh issues
             ;;
         */bash)
             if [[ "$OSTYPE" == "darwin"* ]]; then
@@ -329,9 +329,7 @@ setup_alias() {
         current_alias=$(grep "alias q1wallet=" "$profile_file" | sed 's/alias q1wallet=//')
         if [ "$current_alias" = "'$INSTALL_DIR/menu.sh'" ]; then
             success_message "Command 'q1wallet' alias already exists and is set up correctly in $profile_file"
-            if [ -f "$profile_file" ]; then
-                source "$profile_file" && success_message "Alias loaded into current session."
-            fi
+            warning_message "You may need to restart your terminal or run 'source $profile_file' to use the alias."
             return 0
         else
             warning_message "An existing alias 'q1wallet' was found in $profile_file pointing to: $current_alias"
@@ -360,14 +358,7 @@ setup_alias() {
 
     if [ $? -eq 0 ]; then
         success_message "Command 'q1wallet' alias added successfully to $profile_file!"
-        # Source the profile file to apply the alias immediately
-        if [ -f "$profile_file" ]; then
-            source "$profile_file" && success_message "Alias loaded into current session. You can now use 'q1wallet'."
-            warning_message "You may have to reload your terminal for this to work".
-        else
-            error_message "Profile file $profile_file not found. You may need to restart your terminal or run 'source $profile_file'."
-            return 1
-        fi
+        warning_message "You may need to restart your terminal or run 'source $profile_file' to use the alias."
         return 0
     else
         error_message "Failed to add alias to $profile_file"
