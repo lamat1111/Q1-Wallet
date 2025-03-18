@@ -18,7 +18,7 @@
 # =============================================================================
 
 
-SCRIPT_VERSION="1.2.3"
+SCRIPT_VERSION="1.2.4"
 
 # Color definitions (platform-agnostic)
 RED='\033[1;31m'
@@ -579,12 +579,7 @@ check_coins() {
     echo "Loading your coins..."
     tput rc
     
-    # Cross-platform date handling
-    if [[ "$OSTYPE" == "darwin"* ]]; then
-        output=$($QCLIENT_EXEC token coins metadata $FLAGS | sort -n -k 5 -r)
-    else
-        output=$($QCLIENT_EXEC token coins metadata $FLAGS | sort -n -k 5 -r)
-    fi
+    output=$($QCLIENT_EXEC token coins metadata $FLAGS | sort -n -k 6 -r)
     
     tput el
     echo "$output"
@@ -679,20 +674,18 @@ create_transaction() {
 
     read -p "Do you want to proceed with this transaction? (y/n): " confirm
 
-    if [[ ${confirm,,} == "y" ]]; then
+    read -p "Do you want to proceed with this transaction? (y/n): " confirm
+    if [[ "$confirm" == "y" ]]; then
         if ! eval "$cmd"; then
             show_error_and_confirm "Transaction failed"
             return 1
         fi
-        
         echo
         echo "Transaction sent. The receiver does not need to accept it."
-        
         if ! wait_with_spinner "Checking updated coins in %s seconds..." 30; then
             show_error_and_confirm "Failed to update coin display"
             return 1
         fi
-        
         echo
         echo "Your coins after transaction:"
         echo "-----------------------------"
@@ -944,7 +937,7 @@ token_split_advanced() {
     echo
 
     read -p "Do you want to proceed with this split? (y/n): " confirm
-    if [[ ${confirm,,} == "y" ]]; then
+    if [[ "$confirm" == "y" ]]; then
         if ! eval "$cmd"; then
             show_error_and_confirm "Split operation failed"
             return 1
@@ -1068,7 +1061,7 @@ token_merge() {
         echo
 
         read -p "Do you want to proceed with this merge? (y/n): " confirm
-        if [[ ${confirm,,} == "y" ]]; then
+        if [[ "$confirm" == "y" ]]; then
             if ! $QCLIENT_EXEC token merge "$left_coin" "$right_coin" $FLAGS; then
                 show_error_and_confirm "Merge operation failed"
                 return 1
@@ -1092,7 +1085,7 @@ token_merge() {
         echo
         
         read -p "Do you want to proceed with merging all coins? (y/n): " confirm
-        if [[ ${confirm,,} == "y" ]]; then
+        if [[ "$confirm" == "y" ]]; then
             if ! $QCLIENT_EXEC token merge all $FLAGS; then
                 show_error_and_confirm "Merge operation failed"
                 return 1
@@ -1329,7 +1322,7 @@ delete_wallet() {
         echo "This action cannot be undone and you will lose all access to this wallet!"
         read -p "Are you absolutely sure you want to delete this wallet? (y/n): " confirm
         
-        if [[ ${confirm,,} == "y" ]]; then
+        if [[ "$confirm" == "y" ]]; then
             echo
             echo "Final confirmation required."
             read -p "Type the wallet name '$selected_wallet' to confirm deletion: " confirmation
@@ -1452,6 +1445,8 @@ encrypt_decrypt_wallets() {
                     echo
                     echo "Your wallets are now encrypted in: $QCLIENT_DIR/wallets.zip"
                     echo "Keep this file and your password safe!"
+                    # Pause and wait for any key press
+                    read -p "Press any key to return to the menu... "
                     main
                     return 0
                     ;;
