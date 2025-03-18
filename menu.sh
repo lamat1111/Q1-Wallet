@@ -1538,14 +1538,11 @@ donations() {
     echo
     echo "$(format_title "Donations")"
     echo '
-Quilbrium.one is a one-man volunteer effort.
-If you would like to chip in some financial help, thank you!
+To support us, you can send a donation to the Quilibrium Community Treasury.
+This is the official treasury (you can verify the address on Discord).
 
-You can send native QUIL at this address:
-0x0e15a09539c95784c8d7e1b80beb175f12967764daa7d19626cc526575483180
-
-You can send ERC-20 tokens at this address:
-0x0fd383A1cfbcf4d1F493Dd71b798ebca89e8a013
+Send ERC-20 tokens at this address:
+0xE09e96E3A3CCBEafC0996d6c0214E10adFD01D65
 
 Or visit this page: https://iri.quest/q-donations
 '
