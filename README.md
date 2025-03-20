@@ -74,8 +74,9 @@ chmod +x menu.sh
 ./menu.sh
 
 # Optional: set up a quick command
-# On Linux: Add a symlink with sudo ln -sf ~/q1wallet/menu.sh /usr/local/bin/q1wallet
-# On macOS: Add an alias to ~/.zprofile with: echo "alias q1wallet='$HOME/q1wallet/menu.sh'" >> ~/.zprofile
+# Add this line to your shell profile file (e.g., ~/.bashrc for Bash on Linux, ~/.bash_profile for Bash on macOS, or ~/.zprofile for Zsh):
+# echo "alias q1wallet='$HOME/q1wallet/menu.sh'" >> ~/.bashrc  # Adjust the file based on your shell
+# Then run 'source ~/.bashrc' (or the appropriate file) or restart your terminal to use the 'q1wallet' command
 ```
 
 ### Windows WSL Installation
