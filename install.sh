@@ -18,8 +18,12 @@
 # =============================================================================
 
 SCRIPT_VERSION=1.1.8
+
+# Variables
 INSTALL_DIR="$HOME/q1wallet"
 MENU_SCRIPT_URL="https://raw.githubusercontent.com/lamat1111/Q1-Wallet/main/menu.sh"
+NODE_KEYS_DIR="$HOME/ceremonyclient/node/.config"
+NODE_WALLET_DIR="$INSTALL_DIR/wallets/node_wallet"
 
 # Color definitions (platform-agnostic)
 RED='\033[1;31m'
@@ -253,58 +257,51 @@ check_dependencies() {
 }
 
 copy_node_keys() {
-    local source_dir="$HOME/ceremonyclient/node/.config"
-    local target_dir="$INSTALL_DIR/wallets/node_wallet"
+    echo -e "\nChecking for existing ceremonyclient configuration..."
     
-    echo -e "\nChecking for existing node keys to import..."
-    
-    # Check if ceremonyclient config directory exists (works on both Linux and macOS)
-    if [ ! -d "$source_dir" ]; then
-        warning_message "No node keys found at $source_dir"
-        echo "Skipping node keys import."
+    # Check if ceremonyclient config directory exists
+    if [ ! -d "$NODE_KEYS_DIR" ]; then
+        warning_message "No ceremonyclient configuration found at $NODE_KEYS_DIR"
+        echo "Skipping ceremonyclient configuration import."
         return 0
     fi
     
-    # Check if required files exist (file checking is identical on both platforms)
-    if [ ! -f "$source_dir/keys.yml" ] || [ ! -f "$source_dir/config.yml" ]; then
-        warning_message "Required node config files (keys.yml or config.yml) not found in $source_dir"
-        echo "Skipping node keys import."
+    # Check if required files exist
+    if [ ! -f "$NODE_KEYS_DIR/keys.yml" ] || [ ! -f "$NODE_KEYS_DIR/config.yml" ]; then
+        warning_message "Required ceremonyclient config files (keys.yml or config.yml) not found in $NODE_KEYS_DIR"
+        echo "Skipping ceremonyclient configuration import."
         return 0
     fi
     
     # Check if node_wallet already exists
-    if [ -d "$target_dir" ]; then
-        warning_message "node_wallet already exists at $target_dir"
-        read -p "Would you like to overwrite the existing node_wallet with your current node keys? (y/n): " overwrite
+    if [ -d "$NODE_WALLET_DIR" ]; then
+        warning_message "node_wallet already exists at $NODE_WALLET_DIR"
+        read -p "Would you like to overwrite the existing node_wallet with ceremonyclient config? (y/n): " overwrite
         if [[ ! $overwrite =~ ^[Yy]$ ]]; then
-            echo "Skipping node keys import."
+            echo "Skipping ceremonyclient configuration import."
             return 0
         fi
-        # Use -f flag with rm for force removal, compatible with both Linux and macOS
-        rm -rf "$target_dir"
+        rm -rf "$NODE_WALLET_DIR"
     fi
     
     # Create node_wallet directory and copy files
-    echo "Importing node keys to node_wallet..."
-    # mkdir -p works the same on both platforms
-    mkdir -p "$target_dir/.config"
+    echo "Importing ceremonyclient configuration to node_wallet..."
+    mkdir -p "$NODE_WALLET_DIR/.config"
     
-    # Use cp with -p to preserve file attributes (works on both Linux and macOS)
-    if ! cp -p "$source_dir/keys.yml" "$source_dir/config.yml" "$target_dir/.config/"; then
-        error_message "Failed to copy node keys"
-        rm -rf "$target_dir"  # Clean up if copy failed
+    if ! cp -p "$NODE_KEYS_DIR/keys.yml" "$NODE_KEYS_DIR/config.yml" "$NODE_WALLET_DIR/.config/"; then
+        error_message "Failed to copy ceremonyclient configuration files"
+        rm -rf "$NODE_WALLET_DIR"  # Clean up if copy failed
         return 1
     fi
     
-    # Verify copy success by checking file existence
-    if [ -f "$target_dir/.config/keys.yml" ] && [ -f "$target_dir/.config/config.yml" ]; then
-        success_message "Successfully imported node keys to $target_dir"
-        echo "Wallet 'node_wallet' has been created with your existing node keys."
-        # Writing to .current_wallet works the same on both platforms
+    # Verify copy success
+    if [ -f "$NODE_WALLET_DIR/.config/keys.yml" ] && [ -f "$NODE_WALLET_DIR/.config/config.yml" ]; then
+        success_message "Successfully imported ceremonyclient configuration to $NODE_WALLET_DIR"
+        echo "Wallet 'node_wallet' has been created with your existing ceremonyclient configuration."
         echo "node_wallet" > "$INSTALL_DIR/.current_wallet"
     else
         error_message "Copy verification failed - files may not have transferred correctly"
-        rm -rf "$target_dir"  # Clean up if verification failed
+        rm -rf "$NODE_WALLET_DIR"  # Clean up if verification failed
         return 1
     fi
     
