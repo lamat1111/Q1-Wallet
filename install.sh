@@ -17,7 +17,7 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 # =============================================================================
 
-SCRIPT_VERSION=1.1.7
+SCRIPT_VERSION=1.1.8
 INSTALL_DIR="$HOME/q1wallet"
 MENU_SCRIPT_URL="https://raw.githubusercontent.com/lamat1111/Q1-Wallet/main/menu.sh"
 
@@ -252,6 +252,65 @@ check_dependencies() {
     success_message "Successfully installed all dependencies!"
 }
 
+copy_node_keys() {
+    local source_dir="$HOME/ceremonyclient/node/.config"
+    local target_dir="$INSTALL_DIR/wallets/node_wallet"
+    
+    echo -e "\nChecking for existing node keys to import..."
+    
+    # Check if ceremonyclient config directory exists (works on both Linux and macOS)
+    if [ ! -d "$source_dir" ]; then
+        warning_message "No node keys found at $source_dir"
+        echo "Skipping node keys import."
+        return 0
+    fi
+    
+    # Check if required files exist (file checking is identical on both platforms)
+    if [ ! -f "$source_dir/keys.yml" ] || [ ! -f "$source_dir/config.yml" ]; then
+        warning_message "Required node config files (keys.yml or config.yml) not found in $source_dir"
+        echo "Skipping node keys import."
+        return 0
+    fi
+    
+    # Check if node_wallet already exists
+    if [ -d "$target_dir" ]; then
+        warning_message "node_wallet already exists at $target_dir"
+        read -p "Would you like to overwrite the existing node_wallet with your current node keys? (y/n): " overwrite
+        if [[ ! $overwrite =~ ^[Yy]$ ]]; then
+            echo "Skipping node keys import."
+            return 0
+        fi
+        # Use -f flag with rm for force removal, compatible with both Linux and macOS
+        rm -rf "$target_dir"
+    fi
+    
+    # Create node_wallet directory and copy files
+    echo "Importing node keys to node_wallet..."
+    # mkdir -p works the same on both platforms
+    mkdir -p "$target_dir/.config"
+    
+    # Use cp with -p to preserve file attributes (works on both Linux and macOS)
+    if ! cp -p "$source_dir/keys.yml" "$source_dir/config.yml" "$target_dir/.config/"; then
+        error_message "Failed to copy node keys"
+        rm -rf "$target_dir"  # Clean up if copy failed
+        return 1
+    fi
+    
+    # Verify copy success by checking file existence
+    if [ -f "$target_dir/.config/keys.yml" ] && [ -f "$target_dir/.config/config.yml" ]; then
+        success_message "Successfully imported node keys to $target_dir"
+        echo "Wallet 'node_wallet' has been created with your existing node keys."
+        # Writing to .current_wallet works the same on both platforms
+        echo "node_wallet" > "$INSTALL_DIR/.current_wallet"
+    else
+        error_message "Copy verification failed - files may not have transferred correctly"
+        rm -rf "$target_dir"  # Clean up if verification failed
+        return 1
+    fi
+    
+    return 0
+}
+
 check_wallet_exists() {
     local wallet_name="$1"
     if [ -d "wallets/$wallet_name" ]; then
@@ -404,9 +463,21 @@ fi
 check_dependencies
 echo
 
+copy_node_keys
+echo
+
 # Ask about wallet creation (platform-agnostic)
 echo
-read -p "Would you like to create a new wallet now? (y/n): " create_wallet
+# Check if node_wallet was created by checking if it exists and was set as current
+if [ -d "$INSTALL_DIR/wallets/node_wallet" ] && [ "$(cat "$INSTALL_DIR/.current_wallet" 2>/dev/null)" = "node_wallet" ]; then
+    success_message "A wallet 'node_wallet' has been created using your imported node keys."
+    echo "You can use this wallet immediately, or create an additional wallet."
+    read -p "Would you like to create an additional wallet now? (y/n): " create_wallet
+else
+    # If no node_wallet was imported, use the original prompt
+    read -p "Would you like to create a new wallet now? (y/n): " create_wallet
+fi
+
 wallet_name=""
 
 if [[ $create_wallet =~ ^[Yy]$ ]]; then
