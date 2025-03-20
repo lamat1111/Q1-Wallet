@@ -17,7 +17,7 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 # =============================================================================
 
-SCRIPT_VERSION=1.1.8
+SCRIPT_VERSION=1.1.9
 
 # Variables
 INSTALL_DIR="$HOME/q1wallet"
@@ -569,13 +569,14 @@ if [[ -n "$wallet_name" ]]; then
 fi
 echo
 echo
-echo "IMPORTANT SECURITY STEPS:"
+warning_message "IMPORTANT SECURITY STEPS:"
 echo "------------------------"
 echo "1. Back up your wallet keys:"
-echo "   After creating your wallet, locate the two key files in:"
-echo "   $HOME/q1wallet/wallets/$wallet_name"
+echo "   After creating your wallet, locate the folders in:"
+echo "   $HOME/q1wallet/wallets"
+echo "   Each folder contains the secret keys to one of your wallets.
 echo
-echo "   Copy these files to an encrypted USB drive for secure storage."
+echo "   Copy these folders to an encrypted USB drive for secure storage."
 echo "   DO NOT upload them online to prevent unauthorized access."
 echo "   Without a backup of your wallet keys, a PC hardware failure"
 echo "   could result in permanent loss of access to your tokens."
