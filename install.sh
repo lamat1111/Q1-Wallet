@@ -467,7 +467,7 @@ echo
 echo
 # Check if node_wallet was created by checking if it exists and was set as current
 if [ -d "$INSTALL_DIR/wallets/node_wallet" ] && [ "$(cat "$INSTALL_DIR/.current_wallet" 2>/dev/null)" = "node_wallet" ]; then
-    success_message "A wallet 'node_wallet' has been created using your imported node keys."
+    #success_message "A wallet 'node_wallet' has been created using your imported node keys."
     echo "You can use this wallet immediately, or create an additional wallet."
     read -p "Would you like to create an additional wallet now? (y/n): " create_wallet
 else
