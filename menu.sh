@@ -144,7 +144,7 @@ if [ -d "$WALLETS_DIR/$WALLET_NAME/.config" ]; then
     FLAGS=$(get_config_flags)
 else
     error_message "No valid wallet configuration found for '$WALLET_NAME'. Please create a new wallet (option 10) or import one (option 11)."
-    echo "The script requires a valid --config path to function."
+    echo "The script requires a valid config.yml file to function."
     exit 1
 fi
 
