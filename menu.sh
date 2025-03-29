@@ -1639,7 +1639,7 @@ Use this script at your own risk and always verify transactions before confirmin
 }
 
 check_for_updates() {
-    local GITHUB_RAW_URL="https://raw.githubusercontent.com/lamat1111/Q1-Wallet/main/test/linux-macOS/menu.sh"
+    local GITHUB_RAW_URL="https://raw.githubusercontent.com/lamat1111/Q1-Wallet/main/menu.sh"
     local SCRIPT_PATH="$QCLIENT_DIR/menu.sh"
     local LATEST_VERSION
     
