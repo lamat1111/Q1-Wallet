@@ -18,7 +18,7 @@
 # =============================================================================
 
 
-SCRIPT_VERSION="1.2.7"
+SCRIPT_VERSION="1.2.8"
 
 # Color definitions (platform-agnostic)
 RED='\033[1;31m'
@@ -36,7 +36,7 @@ warning_message() {
 }
 
 #=====================
-# Variables
+# Main variables
 #=====================
 
 # Cross-platform path resolution (works on both Linux and macOS)
@@ -54,6 +54,22 @@ QUILIBRIUM_RELEASES="https://releases.quilibrium.com"
 # Wallet encryption checks
 #=====================
 
+get_config_flags() {
+    echo "--config $WALLETS_DIR/$WALLET_NAME/.config --public-rpc"
+}
+
+# Initialize current wallet (platform-agnostic)
+if [ -f "$CURRENT_WALLET_FILE" ]; then
+    WALLET_NAME=$(cat "$CURRENT_WALLET_FILE")
+elif check_existing_wallets; then
+    WALLET_NAME=$(find "$WALLETS_DIR" -mindepth 2 -maxdepth 2 -type d -name ".config" | head -n1 | awk -F'/' '{print $(NF-2)}')
+    echo "$WALLET_NAME" > "$CURRENT_WALLET_FILE"
+else
+    WALLET_NAME="Wallet_1"
+    echo "$WALLET_NAME" > "$CURRENT_WALLET_FILE"
+fi
+
+# Define functions before they're called
 check_existing_wallets() {
     if [ -d "$WALLETS_DIR" ]; then
         if find "$WALLETS_DIR" -mindepth 2 -maxdepth 2 -type d -name ".config" | grep -q .; then
@@ -63,7 +79,6 @@ check_existing_wallets() {
     return 1
 }
 
-# Unified encryption check
 check_wallet_encryption() {
     local initial_check="${1:-false}"  # true if called at startup
 
@@ -108,34 +123,30 @@ check_wallet_encryption() {
         done
     elif [ -d "$WALLETS_DIR" ] && [ ! -d "$WALLETS_DIR/$WALLET_NAME/.config" ]; then
         error_message "Current wallet '$WALLET_NAME' configuration not found. Please switch wallets or create a new one."
-        return 1
+        if [ "$initial_check" = "true" ]; then
+            exit 1
+        else
+            return 1
+        fi
     fi
     return 0
 }
 
-# Run initial encryption check
-check_wallet_encryption true
-
-# Initialize current wallet (platform-agnostic)
-if [ -f "$CURRENT_WALLET_FILE" ]; then
-    WALLET_NAME=$(cat "$CURRENT_WALLET_FILE")
-elif check_existing_wallets; then
-    WALLET_NAME=$(find "$WALLETS_DIR" -mindepth 2 -maxdepth 2 -type d -name ".config" | head -n1 | awk -F'/' '{print $(NF-2)}')
-    echo "$WALLET_NAME" > "$CURRENT_WALLET_FILE"
-else
-    # Only create a new wallet if explicitly requested later (e.g., via "Create New Wallet")
-    WALLET_NAME="Wallet_1"
-    echo "$WALLET_NAME" > "$CURRENT_WALLET_FILE"
-    # Do NOT create the directory here; let the user create it explicitly via menu option 10
+# Run initial encryption check once
+if ! check_wallet_encryption true; then
+    error_message "Initial wallet setup failed. Please ensure a valid wallet exists or can be decrypted."
+    exit 1
 fi
 
-# Set FLAGS only after wallet is confirmed to exist or be created
+# Set FLAGS after wallet state is resolved, ensuring .config exists
 if [ -d "$WALLETS_DIR/$WALLET_NAME/.config" ]; then
     FLAGS=$(get_config_flags)
 else
-    # If no wallet directory exists yet, warn the user later in the menu
-    FLAGS=""
+    error_message "No valid wallet configuration found for '$WALLET_NAME'. Please create a new wallet (option 10) or import one (option 11)."
+    echo "The script requires a valid --config path to function."
+    exit 1
 fi
+
 
 #=====================
 # Dependency Checks and Auto-Install (Cross-Platform)
