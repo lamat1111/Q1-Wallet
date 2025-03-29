@@ -17,7 +17,7 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 # =============================================================================
 
-SCRIPT_VERSION=1.1.9
+SCRIPT_VERSION=1.2.0
 
 # Variables
 INSTALL_DIR="$HOME/q1wallet"
@@ -574,7 +574,7 @@ echo "------------------------"
 echo "1. Back up your wallet keys:"
 echo "   After creating your wallet, locate the folders in:"
 echo "   $HOME/q1wallet/wallets"
-echo "   Each folder contains the secret keys to one of your wallets.
+echo "   Each folder contains the secret keys to one of your wallets."
 echo
 echo "   Copy these folders to an encrypted USB drive for secure storage."
 echo "   DO NOT upload them online to prevent unauthorized access."
