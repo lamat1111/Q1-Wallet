@@ -976,6 +976,11 @@ token_merge() {
     echo "This function allows you to merge coins using different methods"
     echo
     
+    if ! confirm_proceed "Merge Coins" "$description"; then
+        main
+        return 1
+    fi
+    
     while true; do
         echo
         echo "Choose merge option:"
@@ -1102,8 +1107,8 @@ token_merge() {
                 break
             done
 
-            # Get the last 'n' coin addresses
-            coin_addrs=$(echo "$coins_output" | grep -oP '(?<=Coin\s)[0-9a-fx]+' | tail -n "$num_coins" | tr '\n' ' ')
+            # Get the last 'n' coin addresses (BSD-compatible regex)
+            coin_addrs=$(echo "$coins_output" | grep -o "Coin [0-9a-fx]\+" | awk '{print $2}' | tail -n "$num_coins" | tr '\n' ' ')
             
             if [[ -z "$coin_addrs" ]]; then
                 show_error_and_confirm "Sorry, no coins were found to merge"
