@@ -18,7 +18,7 @@
 # =============================================================================
 
 
-SCRIPT_VERSION="1.2.6"
+SCRIPT_VERSION="1.2.7"
 
 # Color definitions (platform-agnostic)
 RED='\033[1;31m'
@@ -26,6 +26,14 @@ ORANGE='\033[0;33m'
 PURPLE='\033[0;35m'
 BOLD='\033[1m'
 NC='\033[0m'
+
+error_message() {
+    echo -e "${RED}❌ $1${NC}"
+}
+
+warning_message() {
+    echo -e "${ORANGE}⚠️  $1${NC}"
+}
 
 #=====================
 # Variables
@@ -37,6 +45,15 @@ QCLIENT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WALLETS_DIR="$QCLIENT_DIR/wallets"
 CURRENT_WALLET_FILE="$QCLIENT_DIR/.current_wallet"
 
+QCLIENT_EXEC=$(find "$QCLIENT_DIR" -maxdepth 1 -type f -name "qclient-*" ! -name "*.dgst*" ! -name "*.sig*" ! -name "*Zone.Identifier*" | sort -V | tail -n 1)
+
+QCLIENT_RELEASE_URL="https://releases.quilibrium.com/qclient-release"
+QUILIBRIUM_RELEASES="https://releases.quilibrium.com"
+
+#=====================
+# Wallet encryption checks
+#=====================
+
 check_existing_wallets() {
     if [ -d "$WALLETS_DIR" ]; then
         if find "$WALLETS_DIR" -mindepth 2 -maxdepth 2 -type d -name ".config" | grep -q .; then
@@ -46,6 +63,59 @@ check_existing_wallets() {
     return 1
 }
 
+# Unified encryption check
+check_wallet_encryption() {
+    local initial_check="${1:-false}"  # true if called at startup
+
+    if [ ! -d "$WALLETS_DIR" ] && [ -f "$QCLIENT_DIR/wallets.zip" ]; then
+        echo
+        echo "Your wallets are encrypted."
+        
+        while true; do
+            read -s -p "Password: " password
+            echo
+            
+            if ! unzip -qq -t -P "$password" "$QCLIENT_DIR/wallets.zip" >/dev/null 2>&1; then
+                error_message "Incorrect password"
+                echo "Please try again (Ctrl+C to quit)."
+                echo
+                continue
+            fi
+            
+            if unzip -qq -P "$password" "$QCLIENT_DIR/wallets.zip" -d "$QCLIENT_DIR"; then
+                if [ -d "$WALLETS_DIR" ] && [ -n "$(find "$WALLETS_DIR" -type f)" ]; then
+                    rm "$QCLIENT_DIR/wallets.zip"
+                    echo "✅ Wallets decrypted successfully"
+                    return 0
+                else
+                    error_message "Decryption failed or no wallet files found"
+                    [ -d "$WALLETS_DIR" ] && rm -rf "$WALLETS_DIR"
+                    if [ "$initial_check" = "true" ]; then
+                        exit 1
+                    else
+                        return 1
+                    fi
+                fi
+            else
+                error_message "Unexpected error during decryption"
+                [ -d "$WALLETS_DIR" ] && rm -rf "$WALLETS_DIR"
+                if [ "$initial_check" = "true" ]; then
+                    exit 1
+                else
+                    return 1
+                fi
+            fi
+        done
+    elif [ -d "$WALLETS_DIR" ] && [ ! -d "$WALLETS_DIR/$WALLET_NAME/.config" ]; then
+        error_message "Current wallet '$WALLET_NAME' configuration not found. Please switch wallets or create a new one."
+        return 1
+    fi
+    return 0
+}
+
+# Run initial encryption check
+check_wallet_encryption true
+
 # Initialize current wallet (platform-agnostic)
 if [ -f "$CURRENT_WALLET_FILE" ]; then
     WALLET_NAME=$(cat "$CURRENT_WALLET_FILE")
@@ -53,21 +123,19 @@ elif check_existing_wallets; then
     WALLET_NAME=$(find "$WALLETS_DIR" -mindepth 2 -maxdepth 2 -type d -name ".config" | head -n1 | awk -F'/' '{print $(NF-2)}')
     echo "$WALLET_NAME" > "$CURRENT_WALLET_FILE"
 else
+    # Only create a new wallet if explicitly requested later (e.g., via "Create New Wallet")
     WALLET_NAME="Wallet_1"
     echo "$WALLET_NAME" > "$CURRENT_WALLET_FILE"
-    mkdir -p "$WALLETS_DIR/$WALLET_NAME/.config"
+    # Do NOT create the directory here; let the user create it explicitly via menu option 10
 fi
 
-get_config_flags() {
-    echo "--config $WALLETS_DIR/$WALLET_NAME/.config --public-rpc"
-}
-
-FLAGS=$(get_config_flags)
-
-QCLIENT_EXEC=$(find "$QCLIENT_DIR" -maxdepth 1 -type f -name "qclient-*" ! -name "*.dgst*" ! -name "*.sig*" ! -name "*Zone.Identifier*" | sort -V | tail -n 1)
-
-QCLIENT_RELEASE_URL="https://releases.quilibrium.com/qclient-release"
-QUILIBRIUM_RELEASES="https://releases.quilibrium.com"
+# Set FLAGS only after wallet is confirmed to exist or be created
+if [ -d "$WALLETS_DIR/$WALLET_NAME/.config" ]; then
+    FLAGS=$(get_config_flags)
+else
+    # If no wallet directory exists yet, warn the user later in the menu
+    FLAGS=""
+fi
 
 #=====================
 # Dependency Checks and Auto-Install (Cross-Platform)
@@ -185,14 +253,6 @@ format_title() {
     
     echo -e "\n${BOLD}=== $title ===${NC}"
     printf "%s\n" "$(printf '%*s' $((width + 8)) | tr ' ' '-')"
-}
-
-error_message() {
-    echo -e "${RED}❌ $1${NC}"
-}
-
-warning_message() {
-    echo -e "${ORANGE}⚠️  $1${NC}"
 }
 
 confirm_proceed() {
@@ -533,29 +593,6 @@ download_latest_qclient() {
         error_message "Download cancelled. Please obtain the Qclient manually."
         return 1
     fi
-}
-
-check_wallet_encryption() {
-    if [ ! -d "$WALLETS_DIR" ] && [ -f "$QCLIENT_DIR/wallets.zip" ]; then
-        echo
-        echo "Your wallets are encrypted."
-        read -s -p "Password: " password
-        echo
-        
-        if unzip -qq -P "$password" "$QCLIENT_DIR/wallets.zip" -d "$QCLIENT_DIR"; then
-            if [ -d "$WALLETS_DIR" ]; then
-                rm "$QCLIENT_DIR/wallets.zip"
-                return 0
-            else
-                error_message "Decryption failed"
-                return 1
-            fi
-        else
-            error_message "Incorrect password"
-            return 1
-        fi
-    fi
-    return 0
 }
 
 
@@ -1691,6 +1728,12 @@ check_for_updates() {
 
 main() {
     while true; do
+        if [ -z "$FLAGS" ]; then
+            echo
+            warning_message "No active wallet configuration found!"
+            echo "Please create a new wallet (10), import a wallet (11), or decrypt your wallets (13)."
+            echo
+        fi
         display_menu
         
         read -rp "Enter your choice: " choice
