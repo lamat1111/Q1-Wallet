@@ -620,7 +620,7 @@ press_any_key() {
     display_menu
 }
 
-check_coins() {
+check_coins_advanced() {
     if ! check_wallet_encryption; then
         return 1
     fi
@@ -635,6 +635,17 @@ check_coins() {
     
     tput el
     echo "$output"
+    echo
+}
+
+check_coins() {
+    if ! check_wallet_encryption; then
+        return 1
+    fi
+    echo
+    echo "$(format_title "Individual coins")"
+    echo
+    $QCLIENT_EXEC token coins $FLAGS
     echo
 }
 
