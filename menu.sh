@@ -19,7 +19,7 @@
 #
 
 
-SCRIPT_VERSION="1.2.8"
+SCRIPT_VERSION="1.3.0"
 
 # Color definitions (platform-agnostic)
 RED='\033[1;31m'
@@ -230,25 +230,26 @@ display_menu() {
                 \___Q1Q\ \______|  QUILIBRIUM.ONE
                     \___|        
                               
-========================================================"
-    echo -e "${BOLD}Q1 WALLET (BETA) ${PURPLE}${BOLD}>> $WALLET_NAME${NC}"
-    echo -e "========================================================
-1) Check balance / address   6) Check individual coins      
-2) Create transaction        7) Merge coins   
-                             8) Split coins  
---------------------------------------------------------
-10) Create new wallet       12) Switch wallet
-11) Import wallet           13) Encrypt/decrypt wallet
-                            14) Delete wallet
---------------------------------------------------------
-U) Check for updates         X) Disclaimer   
-S) Security settings         H) Help
--------------------------------------------------------- 
-D) Donations 
---------------------------------------------------------    
-E) Exit                      v $SCRIPT_VERSION"
+=========================================================="
+    echo -e "  ${BOLD}Q1 WALLET (BETA) ${PURPLE}${BOLD}>> $WALLET_NAME${NC}"
+    echo -e "==========================================================
+  1) Check balance/address       5) Check individual coins      
+  2) Create transaction          6) Merge coins   
+  3) Accept/reject transaction   7) Split coins  
+  4) Create mutual transfer      8) Bridge coins 
+---------------------------------------------------------
+  9) Create new wallet          11) Switch wallet
+ 10) Import wallet              12) Encrypt/decrypt wallet
+                                13) Delete wallet
+----------------------------------------------------------
+  U) Check for updates           X) Disclaimer   
+  S) Security settings           H) Help
+----------------------------------------------------------
+  D) Donations 
+----------------------------------------------------------    
+  E) Exit                        v $SCRIPT_VERSION"
     echo
-    echo -e "${ORANGE}The Q1 WALLET is still in beta. Use at your own risk.${NC}"
+    echo -e "  ${ORANGE}The Q1 WALLET is still in beta. Use at your own risk.${NC}"
     echo
 }
 
@@ -656,6 +657,121 @@ create_transaction() {
     
     echo
     echo "$(format_title "Create Transaction")"
+    echo "This option transfers QUIL to another address."
+    echo "Note: Ensure the recipient address is correct—this cannot be undone."
+    echo "Account addresses differ from node peerIDs and coin IDs; do not send to a coin ID."
+    echo
+    
+    while true; do
+        read -p "Enter the recipient's address (or 'e' to exit): " to_address
+        if [[ "$to_address" == "e" ]]; then
+            echo "Operation cancelled."
+            main
+            return 1
+        fi
+        if validate_hash "$to_address"; then
+            break
+        else
+            error_message "Invalid address format. Address must start with '0x' followed by 64 hexadecimal characters."
+            echo "Example: 0x7fe21cc8205c9031943daf4797307871fbf9ffe0851781acc694636d92712345"
+            echo
+            continue
+        fi
+    done
+    
+    echo
+    echo "Choose transfer method:"
+    echo "1) Transfer a specific amount"
+    echo "2) Transfer a specific coin"
+    echo
+    while true; do
+        read -p "Enter your choice (1-2 or 'e' to exit): " transfer_type
+        if [[ "$transfer_type" == "e" ]]; then
+            echo "Operation cancelled."
+            main
+            return 1
+        fi
+        case "$transfer_type" in
+            1|2)
+                break
+                ;;
+            *)
+                error_message "Invalid choice. Please enter 1, 2, or 'e' to exit."
+                continue
+                ;;
+        esac
+    done
+    
+    if [ "$transfer_type" == "1" ]; then
+        while true; do
+            echo
+            read -p "Enter the QUIL amount to transfer (or 'e' to exit): " amount
+            if [[ "$amount" == "e" ]]; then
+                echo "Operation cancelled."
+                main
+                return 1
+            fi
+            if [[ "$amount" =~ ^[0-9]+\.[0-9]{13,}$ ]]; then
+                error_message "Amount exceeds 12 decimal places. Please use up to 12 decimals (e.g., 1.123456789012)."
+                continue
+            fi
+            if [[ "$amount" =~ ^[0-9]*\.?[0-9]{0,12}$ ]] && [ -n "$amount" ] && [ "$(echo "$amount > 0" | bc)" -eq 1 ]; then
+                transfer_param="$amount"
+                break
+            else
+                error_message "Invalid amount. Please enter a positive number with up to 12 decimals (e.g., 1.5)."
+                continue
+            fi
+        done
+    else  # transfer_type == 2
+        while true; do
+                echo
+                echo "Your current coins before transaction:"
+                echo "--------------------------------------"
+                check_coins
+                echo
+    
+            read -p "Enter the coin ID to transfer (or 'e' to exit): " coin_id
+            if [[ "$coin_id" == "e" ]]; then
+                echo "Operation cancelled."
+                main
+                return 1
+            fi
+            if validate_hash "$coin_id"; then
+                transfer_param="$coin_id"
+                break
+            else
+                error_message "Invalid coin ID format. ID must start with '0x' followed by 64 hexadecimal characters."
+                echo "Example: 0x1148092cdce78c721835601ef39f9c2cd8b48b7787cbea032dd3913a4106a58d"
+                echo
+                continue
+            fi
+        done
+    fi
+    
+    echo
+    echo "Initiating transaction..."
+    if ! $QCLIENT_EXEC token transfer "$to_address" "$transfer_param" $FLAGS; then
+        show_error_and_confirm "Transaction failed"
+        return 1
+    fi
+    
+    echo
+    echo "✅ Transaction initiated successfully."
+    echo "Note: This transaction is pending. Provide the receiver with the Pending Transaction ID"
+    echo "from the command output to accept it."
+    main
+    return 0
+}
+
+create_transaction_old() {
+    if ! check_wallet_encryption; then
+        show_error_and_confirm "Wallet encryption check failed"
+        return 1
+    fi
+    
+    echo
+    echo "$(format_title "Create Transaction")"
     echo "This will transfer a coin to another address."
     echo
     echo "IMPORTANT:"
@@ -750,6 +866,196 @@ create_transaction() {
         main
         return 1
     fi
+}
+
+mutual_transfer() {
+    if ! check_wallet_encryption; then
+        show_error_and_confirm "Wallet encryption check failed"
+        return 1
+    fi
+    
+    echo
+    echo "$(format_title "Perform Mutual Transfer")"
+		echo "This option allows you to perform a mutual transfer between you and another person."
+		echo "Note: Both parties must be online for this to work."
+		echo "The receiver starts by specifying an expected QUIL amount and generating a Rendezvous ID,"
+		echo "which the sender then uses to complete the transfer."
+		echo
+    while true; do
+        echo "Are you the sender or receiver of this mutual transfer?"
+        echo "1) Receiver"
+        echo "2) Sender"
+        echo
+        read -p "Enter your choice (1-2 or 'e' to exit): " role_choice
+        
+        case "$role_choice" in
+            "e")
+                echo "Operation cancelled."
+                main
+                return 1
+                ;;
+            1|2)
+                break
+                ;;
+            *)
+                error_message "Invalid choice. Please enter 1, 2, or 'e' to exit."
+                continue
+                ;;
+        esac
+    done
+    
+    if [ "$role_choice" == "1" ]; then
+        # Receiver
+        while true; do
+            echo
+            read -p "Enter the expected amount in QUIL (up to 12 decimals, or 'e' to exit): " expected_amount
+            if [[ "$expected_amount" == "e" ]]; then
+                echo "Operation cancelled."
+                main
+                return 1
+            fi
+            if [[ "$expected_amount" =~ ^[0-9]+\.[0-9]{13,}$ ]]; then
+                error_message "Amount exceeds 12 decimal places. Please use up to 12 decimals (e.g., 1.123456789012)."
+                continue
+            fi
+            if [[ "$expected_amount" =~ ^[0-9]*\.?[0-9]{0,12}$ ]] && [ -n "$expected_amount" ]; then
+                break
+            else
+                error_message "Invalid amount. Please enter a positive number with up to 12 decimals (e.g., 1.5)."
+                continue
+            fi
+        done
+        echo
+        echo "Initiating mutual receive..."
+        echo "Please provide the sender with the Rendezvous ID displayed below and wait for them to connect."
+        if ! $QCLIENT_EXEC token mutual-receive "$expected_amount" $FLAGS; then
+            show_error_and_confirm "Mutual receive failed"
+            return 1
+        fi
+        echo
+        echo "✅ Mutual receive completed successfully. Funds will be visible in your balance soon."
+    else
+        # Sender
+        while true; do
+            echo
+            read -p "Enter the Rendezvous ID provided by the receiver (or 'e' to exit): " rendezvous_id
+            if [[ "$rendezvous_id" == "e" ]]; then
+                echo "Operation cancelled."
+                main
+                return 1
+            fi
+            if [[ -n "$rendezvous_id" ]]; then
+                break
+            else
+                error_message "Invalid Rendezvous ID. Please enter a valid ID."
+                continue
+            fi
+        done
+        while true; do
+            echo
+            read -p "Enter the amount to transfer in QUIL (up to 12 decimals, or 'e' to exit): " amount
+            if [[ "$amount" == "e" ]]; then
+                echo "Operation cancelled."
+                main
+                return 1
+            fi
+            if [[ "$amount" =~ ^[0-9]+\.[0-9]{13,}$ ]]; then
+                error_message "Amount exceeds 12 decimal places. Please use up to 12 decimals (e.g., 1.123456789012)."
+                continue
+            fi
+            if [[ "$amount" =~ ^[0-9]*\.?[0-9]{0,12}$ ]] && [ -n "$amount" ]; then
+                break
+            else
+                error_message "Invalid amount. Please enter a positive number with up to 12 decimals (e.g., 1.5)."
+                continue
+            fi
+        done
+        echo
+        echo "Initiating mutual transfer..."
+        if ! $QCLIENT_EXEC token mutual-transfer "$rendezvous_id" "$amount" $FLAGS; then
+            show_error_and_confirm "Mutual transfer failed"
+            return 1
+        fi
+        echo
+        echo "✅ Mutual transfer completed successfully."
+    fi
+    
+    main
+    return 0
+}
+
+manage_pending_transaction() {
+    if ! check_wallet_encryption; then
+        show_error_and_confirm "Wallet encryption check failed"
+        return 1
+    fi
+    
+    echo
+    echo "$(format_title "Accept/Reject Transaction")"
+    echo "This option allows you to accept or reject a pending transaction"
+    echo
+    
+    while true; do
+        echo "Choose an action:"
+        echo "1) Accept a transaction"
+        echo "2) Reject a transaction"
+        echo
+        read -p "Enter your choice (1-2 or 'e' to exit): " choice
+        
+        case "$choice" in
+            "e")
+                echo "Operation cancelled."
+                main
+                return 1
+                ;;
+            1|2)
+                break
+                ;;
+            *)
+                error_message "Invalid choice. Please enter 1, 2, or 'e' to exit."
+                continue
+                ;;
+        esac
+    done
+    
+    while true; do
+        echo
+        read -p "Enter the transaction ID (or 'e' to exit): " pending_tx_id
+        if [[ "$pending_tx_id" == "e" ]]; then
+            echo "Operation cancelled."
+            main
+            return 1
+        fi
+        
+        if validate_hash "$pending_tx_id"; then
+            break
+        else
+            error_message "Invalid transaction ID format. ID must start with '0x' followed by 64 hexadecimal characters."
+            echo "Example: 0x7fe21cc8205c9031943daf4797307871fbf9ffe0851781acc694636d92712345"
+            echo
+            continue
+        fi
+    done
+    
+    if [ "$choice" == "1" ]; then
+        action="accept"
+    else
+        action="reject"
+    fi
+    
+    if ! $QCLIENT_EXEC token "$action" "$pending_tx_id" $FLAGS; then
+        show_error_and_confirm "Transaction $action failed"
+        return 1
+    fi
+    
+    echo
+    if [ "$action" == "accept" ]; then
+        echo "✅ Transaction accepted successfully. The funds will be visible in your balance soon."
+    else
+        echo "✅ Transaction rejected successfully."
+    fi
+    main
+    return 0
 }
 
 token_split_advanced() {
@@ -1012,6 +1318,14 @@ token_split_advanced() {
         main
         return 1
     fi
+}
+
+bridge_coins() {
+    echo
+    echo "$(format_title "Bridge Coins")"
+    echo "How to bridge naive QUIL to wQUIL (ERC20) and viceversa"
+    echo
+    echo To brige your coins please follow this tutorial: https://iri.quest/q-bridge
 }
 
 token_merge() {
@@ -1753,14 +2067,17 @@ main() {
         case $choice in
             1) check_balance; press_any_key ;;
             2) create_transaction; press_any_key ;;
-            6) check_coins; press_any_key ;;
-            7) token_merge; press_any_key ;;
-            8) token_split_advanced; press_any_key ;;
-            10) create_new_wallet; press_any_key ;;
-            11) import_wallet; press_any_key ;;
-            12) switch_wallet; press_any_key ;;
-            13) encrypt_decrypt_wallets; press_any_key ;;
-            14) delete_wallet; press_any_key ;;
+            3) manage_pending_transaction; press_any_key ;;
+            4) mutual_transfer; press_any_key ;;
+            5) check_coins; press_any_key ;;
+            6) token_merge; press_any_key ;;
+            7) token_split_advanced; press_any_key ;;
+            8) bridge_coins; press_any_key ;;
+            9) create_new_wallet; press_any_key ;;
+            10) import_wallet; press_any_key ;;
+            11) switch_wallet; press_any_key ;;
+            12) encrypt_decrypt_wallets; press_any_key ;;
+            13) delete_wallet; press_any_key ;;
             [uU]) check_qclient_version; press_any_key ;;
             [sS]) security_settings; press_any_key ;;
             [dD]) donations; press_any_key ;;
@@ -1778,5 +2095,5 @@ main() {
 
 check_and_install_deps
 check_qclient_binary
-check_for_updates
+#check_for_updates
 main
