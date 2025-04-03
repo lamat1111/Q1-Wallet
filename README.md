@@ -151,16 +151,6 @@ Q1 Wallet is a standalone script that operates independently of a node installat
     $HOME/q1wallet/wallets/wallet_name
     ```
     where `wallet_name` is any name you want to give to your wallet.
-  
-- **As an alternative**, if you want to manage your node QUIL on Linux, you can install the Q1 menu:
-  - [Q1 Node Quickstart Menu](https://docs.quilibrium.one/start/q1-node-quickstart-menu)
-  - Then use **option 14** and **option 15** in the Q1 menu to handle node tokens.
-
-- **For the Q1 menu to work, ensure:**
-  - You are using **Linux**.
-  - The node is installed in the `$HOME/ceremonyclient` folder.
-
-> **Note:** The Q1 menu does not offer the management of multiple wallets (which the Q1 Wallet does).
 
 ### Enhancing Usability for the Q1 Wallet
 
