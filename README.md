@@ -130,7 +130,20 @@ The script is currently compatible with:
 - `curl`, `zip`, `unzip` (automatically installed on macOS if missing)
 - Internet connection (for updates and qclient download)
 
-### Important Notes
+## Updating the script
+
+The script is designed to auto-update every time it's launched.  
+If it doesn't, you can manually update it by running the following commands in your terminal:
+
+```bash
+cd ~/q1wallet
+curl -L -o menu.sh https://raw.githubusercontent.com/lamat1111/Q1-Wallet/main/menu.sh && chmod +x menu.sh
+```
+
+> Note: The script is typically installed in your home directory under `~/q1wallet`. Adjust the path if you've installed it elsewhere.
+
+
+## Important Notes
 
 - The script automatically downloads the appropriate qclient version for your system (Linux or macOS).
 - On macOS, the quick command uses an alias in your shell profile (e.g., `.zprofile`) instead of a symlink.
@@ -139,7 +152,7 @@ The script is currently compatible with:
 - Optional encryption for wallet storage is available via zip/unzip of the `wallets` folder.
 - Regular updates are provided through the GitHub repository.
 
-### Use of Q1 Wallet if You Are Already Running a Quilibrium Node
+## Use of Q1 Wallet if You Are Already Running a Quilibrium Node
 
 Q1 Wallet is a standalone script that operates independently of a node installation. However, there are a few considerations depending on your setup:
 
@@ -162,7 +175,7 @@ Q1 Wallet is a standalone script that operates independently of a node installat
 
 > **Note:** The Q1 menu does not offer the management of multiple wallets (which the Q1 Wallet does).
 
-### Enhancing Usability for the Q1 Wallet
+## Enhancing Usability for the Q1 Wallet
 
 This repository contains a terminal-based menu script for creating and managing Quilibrium wallets. Below are some ideas to further improve usability, bridging the gap between a traditional CLI and a full GUI application:
 
