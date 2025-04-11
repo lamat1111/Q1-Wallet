@@ -1350,11 +1350,6 @@ token_merge() {
     echo "This function allows you to merge coins using different methods"
     echo
     
-    if ! confirm_proceed "Merge Coins" "$description"; then
-        main
-        return 1
-    fi
-    
     while true; do
         echo
         echo "Choose merge option:"
